@@ -1,0 +1,21 @@
+[project]
+name = "release-keeper"
+version = "0.1.0"
+description = "Release-operations agent for solo app developers, built on Strands Agents SDK"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+dependencies = ["strands-agents[litellm]>=1.54"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+release-keeper = "release_keeper.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["release_keeper*"]
