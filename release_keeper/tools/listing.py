@@ -224,7 +224,8 @@ def run_listing_check(listing: Any, app_facts: Any, *, language: str = "en", sto
               "Keep one copy — usually the one inside the disclosure block.")
     if language == "ko":
         leaked = [ln.strip() for ln in full.splitlines()
-                  if len(re.findall(r"[A-Za-z]{2,}", ln)) >= 6 and not re.search(r"[\uac00-\ud7a3]", ln)]
+                  if len(re.findall(r"[A-Za-z]{2,}", ln)) >= 6 and not re.search(r"[\uac00-\ud7a3]", ln)
+                  and "://" not in ln and " " in ln.strip()]          # a bare URL line is not prose
         if leaked:
             r.add("red", "untranslated_line",
                   f"{len(leaked)} English sentence(s) inside the ko description, e.g. \"{leaked[0][:70]}\" — facts text copied verbatim.",

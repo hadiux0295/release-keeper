@@ -109,3 +109,13 @@ def test_check_flags_duplicate_sentence():
     draft["full_description"] += "\n설정에서 계정 삭제 및 데이터 삭제가 가능합니다."
     rep = run_listing_check(draft, facts, language="ko", store="play")
     assert any(f["item"] == "duplicate_line" for f in rep.findings)
+
+
+def test_ko_check_ignores_url_lines():
+    import json
+    from release_keeper.tools import run_listing_check
+    facts = (EX / "app_facts_example.json").read_text(encoding="utf-8")
+    draft = json.loads((EX / "listing_ko_draft.json").read_text(encoding="utf-8"))
+    draft["full_description"] += "\nhttps://saju.hun-is.com/privacy-policy-and-terms-of-service"
+    rep = run_listing_check(draft, facts, language="ko", store="play")
+    assert not any(f["item"] == "untranslated_line" for f in rep.findings), rep.to_json()

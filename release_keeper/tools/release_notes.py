@@ -240,11 +240,13 @@ def run_release_notes(
 
 @tool
 def release_notes(git_log: str, version: str = "", language: str = "en", store: str = "play", include_internal: bool = False) -> str:
-    """Turn raw `git log --oneline` text into user-facing release notes and a store 'what's new' block.
+    """Turn raw `git log --oneline` text into a DRAFT of user-facing release notes plus a store 'what's new' draft.
 
-    Returns JSON: breaking/new/improved/fixed entries, unclassified (needs a human call),
-    dropped counts, markdown, store_whats_new (Play cap 500 chars / App Store 4000), warnings.
-    The wording is a draft — rewrite entries in plain user language before publishing.
+    Returns JSON: counts (breaking/new/improved/fixed/unclassified), dropped {internal, noise},
+    draft_markdown, draft_store_whats_new, store_cap (Play 500 / App Store 4000 chars),
+    unclassified (raw subjects a human must judge), warnings, note.
+    Both drafts are grouped raw commit subjects — developer jargon. Rewrite them for users and
+    drop lines users would never notice; never copy them into the answer.
 
     Args:
         git_log: Output of `git log --oneline <prev>..HEAD` (one commit per line; hash optional).
