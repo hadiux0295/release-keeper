@@ -14,13 +14,14 @@ import os
 from strands import Agent
 from strands.models.litellm import LiteLLMModel
 
-from .tools import disclosure_check, refund_triage, release_notes
+from .tools import disclosure_check, refund_triage, release_notes, listing_brief, listing_check
 
 DEFAULT_MODEL = "openai/nvidia/nemotron-3-super-120b-a12b:free"
 DEFAULT_API_BASE = "https://openrouter.ai/api/v1"
 
 SYSTEM_PROMPT = """You are ReleaseKeeper, a release-operations assistant for solo app developers.
-You have tools; pick the one that matches the request, call it exactly once, then answer from its output.
+You have tools; pick the one that matches the request, call it once, then answer from its output.
+Exception: a store-listing request is a chain — call listing_brief, write the listing, call listing_check on it, then answer.
 General rules:
 - Never issue legal verdicts. Findings are risks, phrased as "this creates X risk because Y".
 - Repeat any needs_input list from the tool verbatim under "Needs your input".
@@ -30,9 +31,10 @@ Per tool:
 - disclosure_check: report red findings first, each with its concrete fix, then yellow. Skip items that passed.
 - refund_triage: state the event_class in one line, then the entitlement_action as an imperative, then whether a reply is needed. If reply_draft is present, output it verbatim inside a fenced block; do not invent facts not in the event.
 - release_notes: output the markdown as-is, then the store_whats_new block with its character count, then list unclassified commits as questions ("user-facing?").
+- listing_brief / listing_check: write the listing strictly inside the caps and end the full description with the disclosure block verbatim. Output the final listing as ONE fenced ```json block with exactly the fields in output_format.json_fields, then the listing_check verdict and any red/yellow findings. If listing_check returns red, fix and re-check once.
 """
 
-ALL_TOOLS = [disclosure_check, refund_triage, release_notes]
+ALL_TOOLS = [disclosure_check, refund_triage, release_notes, listing_brief, listing_check]
 
 
 def build_model() -> LiteLLMModel:
@@ -43,7 +45,7 @@ def build_model() -> LiteLLMModel:
         client_args={"api_key": api_key, "api_base": os.environ.get("RK_API_BASE", DEFAULT_API_BASE)},
         model_id=os.environ.get("RK_MODEL", DEFAULT_MODEL),
         params={
-            "max_tokens": 3000,
+            "max_tokens": 6000,
             "temperature": 0.2,
             # Free reasoning models can leak long hidden reasoning into the reply and hit max_tokens;
             # OpenRouter honours this flag, other endpoints ignore unknown extra_body keys.

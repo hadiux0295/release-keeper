@@ -33,7 +33,8 @@ CERTAINTY_PATTERNS = [
     r"\baccurate prediction", r"\bpredicts? (your|the) future", r"\bguarantee", r"\bwill happen",
     r"\bexpert (reading|advice)", r"\bdiagnos", r"\bprofessional advice", r"\b100%",
     r"\btrue destiny", r"\bknow (exactly )?what (will|is going to)",
-    r"예언", r"정확한 예측", r"반드시", r"보장",
+    # Korean: skip the negated forms used in disclaimers ("예언이 아닙니다", "보장하지 않습니다")
+    r"예언(?![^.]{0,30}(아니|아닙|아님|않))", r"정확한 예측(?![^.]{0,30}(아니|아닙|아님|않))", r"반드시", r"보장(?![^.]{0,8}(않|아니|아닙))",
 ]
 ADVICE_PATTERN = r"\b(medical|financial|legal|psychological|investment|health)\s+advice\b"
 NOT_ADVICE_PATTERNS = [

@@ -45,3 +45,12 @@ def test_emotional_input_requires_crisis_line():
 def test_tool_wrapper_returns_json():
     out = json.loads(disclosure_check(SAJU_DISCLOSURE, has_payments=True, has_accounts=True, category="fortune"))
     assert out["summary"]["verdict"] in ("OK", "SHIP_WITH_FIXES")
+
+
+def test_korean_negated_disclaimer_is_not_overstated():
+    ko = ("모든 풀이는 AI 언어 모델(Google Gemini)이 사주 개념을 적용해 생성합니다. 성찰과 재미를 위한 것으로, "
+          "미래에 대한 예언이나 의학·심리·법률·금융 조언이 아닙니다. 정확도를 보장하지 않습니다.")
+    r = run_disclosure_check(ko, category="fortune")
+    assert not [f for f in r.findings if f.item == "overstated_claim"], r.to_json()
+    bad = run_disclosure_check("당신의 미래를 정확히 예언합니다. 결과를 보장합니다.", category="fortune")
+    assert any(f.item == "overstated_claim" for f in bad.findings)

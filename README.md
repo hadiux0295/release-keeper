@@ -18,7 +18,7 @@ payment-webhook payloads, git log).
 | `disclosure_check` — scan copy for AI disclosure, framing, refund/deletion/age/crisis lines | ✅ |
 | `refund_triage` — classify a RevenueCat webhook event, say what to do to the entitlement, draft the reply (en/ko) | ✅ |
 | `release_notes` — turn `git log --oneline` into New/Improved/Fixed notes + store 'what's new' under the Play cap | ✅ |
-| `listing_writer` — localized store listing from a feature list | planned |
+| `listing_brief` + `listing_check` — caps, structure and the disclosure block for the model to write from, then a deterministic check of what it wrote (Play / App Store, en·ko fully checked, other languages structural + native-review flag) | ✅ |
 
 ## Quick start
 
@@ -36,15 +36,22 @@ python -m release_keeper refund examples/rc_refund_consumable.json --products ex
 # release notes from a git log (no LLM); omit the file to run git yourself: --repo . --since v1.1.0
 python -m release_keeper notes examples/gitlog_sample.txt --version 1.2.0 --raw
 
+# store listing: print the brief (no LLM) or validate a drafted listing (no LLM)
+python -m release_keeper listing examples/app_facts_example.json --lang ko --raw
+python -m release_keeper listing examples/app_facts_example.json --lang ko --check examples/listing_ko_draft.json
+
 # agent runs (OpenAI-compatible endpoint; OpenRouter free tier by default)
 export OPENROUTER_API_KEY=...
 python -m release_keeper check  examples/saju_listing_bad.txt --payments --category fortune
 python -m release_keeper refund examples/rc_refund_subscription.json --products examples/products.json --app-name "My App"
 python -m release_keeper notes  examples/gitlog_sample.txt --version 1.2.0
+python -m release_keeper listing examples/app_facts_example.json --lang ko --store play
 ```
 
 Measured with the default free model: `check` ~18 s, `refund` ~9 s, `notes` ~60 s (the model
-re-emits every entry). `--raw` is instant.
+re-emits every entry), `listing` ~31 s (brief → draft → check chain). `--raw` is instant.
+`listing` re-runs `listing_check` deterministically on the JSON the agent returned and exits 1 on
+a red finding, so the model cannot talk its way past a cap or a missing disclosure.
 
 Environment: `RK_MODEL` (LiteLLM id, default `openai/nvidia/nemotron-3-super-120b-a12b:free`),
 `RK_API_BASE` (default OpenRouter), `RK_API_KEY`.
@@ -52,7 +59,9 @@ Environment: `RK_MODEL` (LiteLLM id, default `openai/nvidia/nemotron-3-super-120
 ## Design
 
 - Single Strands `Agent`, tools are deterministic Python where possible so results are
-  reproducible; the model plans, calls, and explains.
+  reproducible; the model plans, calls, and explains. Where the output is inherently prose
+  (store listings) the tool pair brackets the model: `listing_brief` fixes caps and mandatory
+  lines up front, `listing_check` verifies the result.
 - Each request is a single turn (prompt → tool → answer). Chat-completions endpoints do not
   carry reasoning content across turns, so the agent is built as a tool chain, not a chat.
 - Findings are **risk flags with a concrete fix**, never legal verdicts. Anything not
@@ -66,8 +75,9 @@ pre-existing material by the same author informed it:
 - The disclosure checklist logic in `disclosure_check` is adapted from the author's internal
   pre-launch review checklist used for their own apps (rules re-implemented as generic code;
   no text copied).
-- Example listing copy in `examples/` is adapted from the author's own published app
-  ([Saju Club](https://saju.hun-is.com)).
+- Example listing copy and app facts in `examples/` are adapted from the author's own published app
+  ([Saju Club](https://saju.hun-is.com)); the en/ko disclosure templates in `listing_brief` follow that
+  app's shipped wording. Store field caps are quoted from Google Play and App Store Connect help pages.
 - The refund-event rule in `refund_triage` (a refund arrives as `CANCELLATION` +
   `cancel_reason=CUSTOMER_SUPPORT`, never as a `REFUND` event) was learned while
   wiring the author's own app to RevenueCat; the dispatch logic is re-implemented here

@@ -3,6 +3,7 @@
   python -m release_keeper check  <copy.txt> [--payments] [--accounts] [--emotional] [--category fortune] [--raw]
   python -m release_keeper refund <event.json> [--products products.json] [--app-name X] [--lang en|ko] [--raw]
   python -m release_keeper notes  [<gitlog.txt> | --repo PATH --since TAG] [--version V] [--lang en|ko] [--store play|appstore] [--raw]
+  python -m release_keeper listing <app_facts.json> [--lang ko] [--store play|appstore] [--check <listing.json>] [--raw]
 
 --raw runs the deterministic tool directly (no LLM). Without it the Strands agent
 plans the call and writes the summary.
@@ -17,14 +18,26 @@ import time
 from pathlib import Path
 
 
-def _run_agent(prompt: str) -> int:
+def _run_agent(prompt: str) -> str:
     from .agent import build_agent
     agent = build_agent()
     t0 = time.time()
     result = agent(prompt)
     print(result)
     print(f"\n[{time.time()-t0:.1f}s]", file=sys.stderr)
-    return 0
+    return str(result)
+
+
+def _extract_json_block(text: str):
+    """Last fenced ```json block in the agent answer, or None."""
+    import re
+    blocks = re.findall(r"```json\s*(\{.*?\})\s*```", text, re.S)
+    for b in reversed(blocks):
+        try:
+            return json.loads(b)
+        except json.JSONDecodeError:
+            continue
+    return None
 
 
 def cmd_check(a) -> int:
@@ -36,7 +49,8 @@ def cmd_check(a) -> int:
         return 0
     flags = (f"app_uses_ai=true, has_payments={a.payments}, has_accounts={a.accounts}, "
              f"has_free_text_emotional_input={a.emotional}, category={a.category}")
-    return _run_agent(f"Run disclosure_check on the copy below with {flags}, then summarize.\n\n---\n{text}")
+    _run_agent(f"Run disclosure_check on the copy below with {flags}, then summarize.\n\n---\n{text}")
+    return 0
 
 
 def cmd_refund(a) -> int:
@@ -46,9 +60,10 @@ def cmd_refund(a) -> int:
         from .tools import run_refund_triage
         print(run_refund_triage(event_json, products=json.loads(products_json), app_name=a.app_name, language=a.lang).to_json())
         return 0
-    return _run_agent(
+    _run_agent(
         f"Run refund_triage on the RevenueCat webhook event below (app_name={a.app_name!r}, language={a.lang!r}, "
         f"products_json={products_json!r}), then tell me what to do.\n\n---\n{event_json}")
+    return 0
 
 
 def cmd_notes(a) -> int:
@@ -64,9 +79,33 @@ def cmd_notes(a) -> int:
         from .tools import run_release_notes
         print(run_release_notes(log, version=a.version, language=a.lang, store=a.store, include_internal=a.include_internal).to_json())
         return 0
-    return _run_agent(
+    _run_agent(
         f"Run release_notes on the git log below (version={a.version!r}, language={a.lang!r}, store={a.store!r}, "
         f"include_internal={a.include_internal}), then present the notes.\n\n---\n{log}")
+    return 0
+
+
+def cmd_listing(a) -> int:
+    from .tools import run_listing_brief, run_listing_check
+    facts = Path(a.file).read_text(encoding="utf-8")
+    if a.check:
+        listing = Path(a.check).read_text(encoding="utf-8")
+        print(run_listing_check(listing, facts, language=a.lang, store=a.store).to_json())
+        return 0
+    if a.raw:
+        print(run_listing_brief(facts, language=a.lang, store=a.store).to_json())
+        return 0
+    answer = _run_agent(
+        f"Write the {a.store} store listing in language {a.lang!r} for the app described below. "
+        f"Call listing_brief first (language={a.lang!r}, store={a.store!r}), write the listing, then call listing_check on it.\n\n---\n{facts}")
+    # Independent verification: whatever the model claims, the deterministic check has the last word.
+    listing = _extract_json_block(answer)
+    if listing is None:
+        print("\n[post-check] no fenced JSON listing found in the answer — cannot verify", file=sys.stderr)
+        return 2
+    rep = run_listing_check(listing, facts, language=a.lang, store=a.store)
+    print("\n[post-check] " + rep.to_json(), file=sys.stderr)
+    return 0 if rep.verdict != "BLOCK" else 1
 
 
 def main(argv=None) -> int:
@@ -101,6 +140,14 @@ def main(argv=None) -> int:
     n.add_argument("--include-internal", action="store_true")
     n.add_argument("--raw", action="store_true")
     n.set_defaults(fn=cmd_notes)
+
+    l = sub.add_parser("listing", help="brief → model writes → check; or --check a listing JSON")
+    l.add_argument("file", help="app facts JSON (see examples/app_facts_example.json)")
+    l.add_argument("--lang", default="en")
+    l.add_argument("--store", default="play", choices=["play", "appstore"])
+    l.add_argument("--check", help="listing JSON to validate deterministically (no LLM)")
+    l.add_argument("--raw", action="store_true", help="print the brief only (no LLM)")
+    l.set_defaults(fn=cmd_listing)
 
     a = p.parse_args(argv)
     return a.fn(a)

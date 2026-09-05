@@ -1,0 +1,19 @@
+{
+  "name": "Saju Today: Daily Fortune",
+  "tagline": "A daily reflection built from your Saju birth chart",
+  "category": "fortune",
+  "model_name": "Google Gemini",
+  "audience": "people curious about Korean Saju who want a short daily read, not a horoscope",
+  "features": [
+    "Daily reading generated from your four-pillar chart, in Korean or English",
+    "One-glance card with your day master, strongest element, and today's theme",
+    "Deep Reading credits for a longer, question-driven session",
+    "Share card export for social media",
+    "Guest mode: try before creating an account"
+  ],
+  "has_payments": true,
+  "has_accounts": true,
+  "has_free_text_emotional_input": false,
+  "min_age": 13,
+  "refund_line": "Refunds within 7 days of purchase. Pro renews automatically each month until cancelled; cancel anytime in Google Play subscription settings."
+}
