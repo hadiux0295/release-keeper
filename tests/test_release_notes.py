@@ -13,7 +13,7 @@ def test_noise_and_internal_dropped():
     srcs = " ".join(e.source for b in (n.breaking, n.new, n.improved, n.fixed, n.unclassified) for e in b)
     assert "[oci-autocommit]" not in srcs and "[tlog]" not in srcs and "Merge branch" not in srcs
     assert "chore(session)" not in srcs and "docs(saju)" not in srcs and "test(saju)" not in srcs
-    assert n.dropped_noise >= 3 and n.dropped_internal >= 5
+    assert n.dropped_noise >= 2 and n.dropped_internal >= 5
 
 
 def test_conventional_types_grouped():
@@ -63,6 +63,34 @@ def test_agent_json_is_slim_but_keeps_unclassified_sources():
     n = run_release_notes(LOG, version="1.2.0")
     slim = json.loads(n.to_agent_json())
     full = json.loads(n.to_json())
-    assert "new" not in slim and "fixed" not in slim and slim["markdown"] == full["markdown"]
+    assert "new" not in slim and "fixed" not in slim and slim["draft_markdown"] == full["markdown"]
     assert len(slim["unclassified"]) == len(full["unclassified"]) and all(isinstance(u, str) for u in slim["unclassified"])
     assert len(n.to_agent_json()) < 0.6 * len(n.to_json())
+
+
+SESSION_LOG = """088b7e11 chore(session): saju vC20(1.1.17) 빌드 + Play 내부 트랙 업로드 완료 [tlog]
+7a3ced35 chore(session): saju 한영전환 답변언어 버그: dailyLine lang 오표기 수정·테스트 129/129 [tlog]
+f70b9130 chore(session): saju 게스트 '체험 종료' CTA + Google 버튼 공식 다크변형 추가 [tlog]
+2b869fa3 chore(gen): tlog 2026-09-05T07:08Z [oci-autocommit]
+"""
+
+
+def test_session_index_repo_default_warns_and_include_internal_classifies():
+    """Repos that commit per work session: every commit is chore(session) … [tlog]. Default run must
+    say so (not silently produce nothing); include_internal must keyword-classify the subjects."""
+    n = run_release_notes(SESSION_LOG, version="1.1.17")
+    assert not (n.new or n.fixed or n.improved) and n.dropped_internal == 3 and n.dropped_noise == 1
+    assert any("include_internal" in w for w in n.warnings)
+    k = run_release_notes(SESSION_LOG, version="1.1.17", include_internal=True)
+    assert any("버그" in e.text for e in k.fixed) and any("CTA" in e.text for e in k.new)
+    assert k.dropped_noise == 1                       # [oci-autocommit] is still noise
+    assert json.loads(k.to_agent_json())["store_cap"] == PLAY_WHATS_NEW_MAX
+
+
+def test_notes_post_check_measures_last_fenced_block():
+    from release_keeper.agent import notes_post_check
+    ans = "## 1.1.17\n- x\n\n```text\n• Fixed: language switch bug\n• New: guest exit button\n```\n"
+    pc = notes_post_check(ans, 500)
+    assert pc["ok"] and pc["chars"] == len("• Fixed: language switch bug\n• New: guest exit button")
+    assert notes_post_check("no block here", 500)["block"] is None
+    assert not notes_post_check("```\n" + "x" * 501 + "\n```", 500)["ok"]

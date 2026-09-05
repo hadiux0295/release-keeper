@@ -66,10 +66,17 @@ def cmd_notes(a) -> int:
         from .tools import run_release_notes
         print(run_release_notes(log, version=a.version, language=a.lang, store=a.store, include_internal=a.include_internal).to_json())
         return 0
-    _run_agent(
+    answer = _run_agent(
         f"Run release_notes on the git log below (version={a.version!r}, language={a.lang!r}, store={a.store!r}, "
         f"include_internal={a.include_internal}), then present the notes.\n\n---\n{log}")
-    return 0
+    from .agent import notes_post_check
+    from .tools.release_notes import PLAY_WHATS_NEW_MAX, APP_STORE_WHATS_NEW_MAX
+    pc = notes_post_check(answer, PLAY_WHATS_NEW_MAX if a.store == "play" else APP_STORE_WHATS_NEW_MAX)
+    if pc["block"] is None:
+        print("\n[post-check] no fenced store block found in the answer — cannot verify the cap", file=sys.stderr)
+        return 2
+    print(f"\n[post-check] store what's-new {pc['chars']}/{pc['cap']} chars — {'OK' if pc['ok'] else 'OVER CAP'}", file=sys.stderr)
+    return 0 if pc["ok"] else 1
 
 
 def cmd_listing(a) -> int:

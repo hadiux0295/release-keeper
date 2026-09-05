@@ -28,8 +28,10 @@ HASH_PREFIX = re.compile(r"^[0-9a-f]{7,40}\s+")
 USER_FACING_TYPES = {"feat": "new", "fix": "fixed", "perf": "improved"}
 INTERNAL_TYPES = {"chore", "ci", "build", "test", "docs", "style", "refactor", "revert", "release", "sync", "gen", "session"}
 
+# `[tlog]` session-index commits are NOT noise: their subject is the only record of what shipped
+# in repos that commit per work session (measured on the author's monorepo, 45/45 commits in a release range).
 NOISE_PATTERNS = [
-    r"\[tlog\]", r"\[oci-autocommit\]", r"^merge\b", r"^wip\b", r"^bump\b", r"^version\b",
+    r"\[oci-autocommit\]", r"^merge\b", r"^wip\b", r"^bump\b", r"^version\b",
     r"^release v?\d", r"^tlog\b", r"^update readme", r"^\s*$",
 ]
 # keyword fallback for non-conventional subjects (EN + KO)
@@ -53,6 +55,7 @@ class Entry:
     source: str        # original line
     scope: Optional[str] = None
     via: str = "conventional"  # conventional | keyword | none
+    keyword_kind: Optional[str] = None  # for typed-internal commits: what the subject's keywords say
 
 
 @dataclass
@@ -67,6 +70,7 @@ class Notes:
     dropped_noise: int = 0
     markdown: str = ""
     store_whats_new: str = ""
+    store_cap: int = PLAY_WHATS_NEW_MAX
     warnings: list[str] = field(default_factory=list)
 
     def to_agent_json(self) -> str:
@@ -77,9 +81,12 @@ class Notes:
             "version": self.version,
             "counts": {k: len(getattr(self, k)) for k in ("breaking", "new", "improved", "fixed", "unclassified")},
             "dropped": {"internal": self.dropped_internal, "noise": self.dropped_noise},
-            "markdown": self.markdown,
-            "store_whats_new": self.store_whats_new,
-            "store_whats_new_chars": len(self.store_whats_new),
+            "draft_markdown": self.markdown,
+            "draft_store_whats_new": self.store_whats_new,
+            "store_cap": self.store_cap,
+            "note": ("Both drafts are raw commit subjects grouped by rule — developer jargon, not user copy. "
+                     "Rewrite every line for users and drop lines users would never notice "
+                     "(reports, measurements, specs, design samples, deploy logs, tests, docs). Do not copy the drafts."),
             "unclassified": [e.source for e in self.unclassified],
             "warnings": self.warnings,
         }
@@ -129,22 +136,29 @@ def parse_line(raw: str) -> Optional[Entry]:
         if ctype in USER_FACING_TYPES:
             return Entry(text, USER_FACING_TYPES[ctype], raw.strip(), scope, "conventional")
         if ctype in INTERNAL_TYPES:
-            return Entry(text, "internal", raw.strip(), scope, "conventional")
+            # A typed-internal commit whose subject still describes user-visible work (session-index
+            # style "chore(session): fixed X, shipped Y") gets a keyword pass; the caller decides via
+            # include_internal whether these are kept at all.
+            kw = _keyword_kind(subject)
+            return Entry(text, "internal", raw.strip(), scope, "conventional", keyword_kind=kw)
         return Entry(text, "unclassified", raw.strip(), scope, "conventional")
 
     subject = _clean_subject(line)
     text = _humanize(subject)
+    kind = _keyword_kind(subject)
+    return Entry(text, kind or "unclassified", raw.strip(), None, "keyword" if kind else "none")
+
+
+def _keyword_kind(subject: str) -> Optional[str]:
+    """breaking | internal | fixed | new | improved from the EN/KO keyword lists, or None."""
     if _match_any(subject, KW_BREAKING):
-        return Entry(text, "breaking", raw.strip(), None, "keyword")
+        return "breaking"
     if _match_any(subject, KW_INTERNAL) and not _match_any(subject, KW_FIXED):
-        return Entry(text, "internal", raw.strip(), None, "keyword")
-    if _match_any(subject, KW_FIXED):
-        return Entry(text, "fixed", raw.strip(), None, "keyword")
-    if _match_any(subject, KW_NEW):
-        return Entry(text, "new", raw.strip(), None, "keyword")
-    if _match_any(subject, KW_IMPROVED):
-        return Entry(text, "improved", raw.strip(), None, "keyword")
-    return Entry(text, "unclassified", raw.strip(), None, "none")
+        return "internal"
+    for kind, kws in (("fixed", KW_FIXED), ("new", KW_NEW), ("improved", KW_IMPROVED)):
+        if _match_any(subject, kws):
+            return kind
+    return None
 
 
 def render_markdown(n: Notes, language: str) -> str:
@@ -182,7 +196,7 @@ def run_release_notes(
     """Pure-python core (unit-testable without the agent)."""
     language = language if language in ("en", "ko") else "en"
     limit = PLAY_WHATS_NEW_MAX if store == "play" else APP_STORE_WHATS_NEW_MAX
-    n = Notes(version=version)
+    n = Notes(version=version, store_cap=limit)
     seen: set[str] = set()
     for raw in git_log.splitlines():
         e = parse_line(raw)
@@ -198,13 +212,19 @@ def run_release_notes(
         if key in seen:
             continue
         seen.add(key)
-        bucket = "unclassified" if e.kind == "internal" else e.kind
-        getattr(n, bucket).append(e)
+        if e.kind == "internal":                      # kept only with include_internal
+            if e.keyword_kind in ("breaking", "new", "improved", "fixed"):
+                e.kind, e.via = e.keyword_kind, "keyword"
+            else:
+                e.kind = "unclassified"
+        getattr(n, e.kind).append(e)
 
     n.markdown = render_markdown(n, language)
     n.store_whats_new = render_store(n, language, limit)
     if not (n.breaking or n.new or n.improved or n.fixed):
-        n.warnings.append("No user-facing entries found. Either the range is wrong or commits are not typed (feat/fix/perf); check unclassified.")
+        hint = (f" {n.dropped_internal} typed-internal commit(s) were dropped — re-run with include_internal=true if your "
+                "repo records shipped work under chore/docs (session-index style)." if n.dropped_internal else "")
+        n.warnings.append("No user-facing entries found. Either the range is wrong or commits are not typed (feat/fix/perf); check unclassified." + hint)
     if n.unclassified:
         n.warnings.append(f"{len(n.unclassified)} commit(s) could not be classified — decide whether each is user-facing.")
     total = sum(len(getattr(n, k)) for k in ("breaking", "new", "improved", "fixed"))

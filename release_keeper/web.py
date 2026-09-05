@@ -130,8 +130,14 @@ def api_notes(b: NotesIn) -> Any:
     if b.mode == "raw":
         return json.loads(run_release_notes(log, version=b.version, language=b.lang, store=b.store,
                                             include_internal=b.include_internal).to_json())
-    return _agent(f"Run release_notes on the git log below (version={b.version!r}, language={b.lang!r}, store={b.store!r}, "
-                  f"include_internal={b.include_internal}), then present the notes.\n\n---\n{log}")
+    out = _agent(f"Run release_notes on the git log below (version={b.version!r}, language={b.lang!r}, store={b.store!r}, "
+                 f"include_internal={b.include_internal}), then present the notes.\n\n---\n{log}")
+    from .agent import notes_post_check
+    from .tools.release_notes import PLAY_WHATS_NEW_MAX, APP_STORE_WHATS_NEW_MAX
+    pc = notes_post_check(out["answer"], PLAY_WHATS_NEW_MAX if b.store == "play" else APP_STORE_WHATS_NEW_MAX)
+    out["post_check"] = pc
+    out["verdict"] = "OK" if pc["ok"] else ("UNVERIFIED" if pc["block"] is None else "BLOCK")
+    return out
 
 
 @app.post("/api/listing")

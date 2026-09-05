@@ -56,7 +56,9 @@ REFUND_WORDS = ["refund", "cancel", "환불", "취소"]
 DELETE_WORDS = ["delete your account", "delete account", "account deletion", "delete your data", "erase your data", "계정 삭제", "데이터 삭제"]
 CRISIS_WORDS = ["helpline", "findahelpline", "crisis", "emergency services", "988", "1393", "상담전화", "긴급"]
 AGE_PATTERNS = [r"\b1[3-8]\+", r"\b(at least|over|older than|minimum age)\s+(of\s+)?1[3-8]\b", r"\b1[3-8]\s+(years|or older)", r"만\s?1[3-9]세"]
-RENEW_WORDS = ["auto-renew", "automatically renew", "renews automatically", "recurring", "자동 갱신", "자동으로 갱신"]
+RENEW_WORDS = ["auto-renew", "automatically renew", "renews automatically", "recurring", "renews monthly", "renews yearly",
+               "renews each month", "renews every month", "renews annually", "until you cancel", "until cancelled", "until canceled",
+               "자동 갱신", "자동으로 갱신", "해지 전까지", "해지하기 전까지"]
 SUBSCRIPTION_WORDS = ["subscription", "/month", "per month", "monthly", "/year", "yearly", "구독", "월 "]
 
 

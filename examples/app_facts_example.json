@@ -1,19 +1,25 @@
 {
   "name": "Saju Today: Daily Fortune",
-  "tagline": "A daily reflection built from your Saju birth chart",
+  "tagline": "Your daily fortune and Saju reading, written by AI for reflection and fun",
   "category": "fortune",
   "model_name": "Google Gemini",
-  "audience": "people curious about Korean Saju who want a short daily read, not a horoscope",
+  "audience": "people curious about Saju / BaZi / Four Pillars who want a short daily reading built from an exact birth chart, not a sun sign",
   "features": [
-    "Daily reading generated from your four-pillar chart, in Korean or English",
-    "One-glance card with your day master, strongest element, and today's theme",
-    "Deep Reading credits for a longer, question-driven session",
-    "Share card export for social media",
-    "Guest mode: try before creating an account"
+    "Today — a short daily fortune from your four-pillar chart, plus one takeaway",
+    "Saju x Stars — Eastern Saju and Western astrology read side by side",
+    "This Week — seven-day flow, main theme, good days and careful days",
+    "Compatibility — the energy between two people from both birth charts",
+    "My Chart — four pillars, core element, five-element balance",
+    "Reading history kept in the app; dark, uncluttered, no ads"
   ],
   "has_payments": true,
   "has_accounts": true,
   "has_free_text_emotional_input": false,
   "min_age": 13,
-  "refund_line": "Refunds within 7 days of purchase. Pro renews automatically each month until cancelled; cancel anytime in Google Play subscription settings."
+  "refund_line": "Pro renews monthly until you cancel; cancel anytime in Google Play. Refunds follow Google Play policy.",
+  "pricing": "Free: one reading a day. Pro US$6.99/month: unlimited daily readings + 10 deep readings a month, renews monthly until cancelled. Single deep-reading credit US$2.99, ten-pack available, credits never expire.",
+  "languages": [
+    "en",
+    "ko"
+  ]
 }

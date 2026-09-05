@@ -33,7 +33,7 @@ General rules:
 Per tool:
 - disclosure_check: report red findings first, each with its concrete fix, then yellow. Skip items that passed.
 - refund_triage: state the event_class in one line, then the entitlement_action as an imperative, then whether a reply is needed. If reply_draft is present, output it verbatim inside a fenced block; do not invent facts not in the event.
-- release_notes: output the markdown as-is, then the store_whats_new block with its character count, then list unclassified commits as questions ("user-facing?").
+- release_notes: the tool returns DRAFTS built from raw commit subjects — never copy them. Step 1, filter: keep an entry only if a person using the app would notice it (a screen, wording, price, a bug they could hit). Reports, measurements, specs, prompt experiments, design samples, deploy/ops logs, tests, docs, planning = internal — list those in one line under "Dropped as internal" (count + a few words). Step 2, rewrite each kept entry in plain user language: one line, what changed for the user, no file names, ticket ids, section numbers, version tags or team jargon; translate to the requested language. Keep the grouping Important / New / Improved / Fixed. Step 3, write the store what's-new yourself from the rewritten entries as ONE fenced ```text block, bullet per line, strictly under store_cap characters. Step 4, list unclassified commits as questions ("user-facing?") quoting their subject, not their hash.
 - listing_brief / listing_check: write the listing strictly inside the caps and end the full description with the disclosure block verbatim. Output the final listing as ONE fenced ```json block with exactly the fields in output_format.json_fields, then the listing_check verdict and any red/yellow findings. If listing_check returns red, fix and re-check once.
 """
 
@@ -102,3 +102,13 @@ def listing_post_check(answer: str, app_facts_json: str, *, language: str, store
     if listing is None:
         return None, None
     return listing, run_listing_check(listing, app_facts_json, language=language, store=store)
+
+
+def notes_post_check(answer: str, cap: int) -> dict:
+    """Deterministic check of the store what's-new the model wrote: the LAST fenced block in the
+    answer is measured against the store cap. Returns {"chars", "cap", "ok", "block"}; block None if absent."""
+    blocks = re.findall(r"```[a-zA-Z]*\s*\n(.*?)```", answer, re.S)
+    if not blocks:
+        return {"chars": 0, "cap": cap, "ok": False, "block": None}
+    block = blocks[-1].strip()
+    return {"chars": len(block), "cap": cap, "ok": len(block) <= cap, "block": block}
