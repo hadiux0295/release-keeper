@@ -104,13 +104,36 @@ def listing_post_check(answer: str, app_facts_json: str, *, language: str, store
     return listing, run_listing_check(listing, app_facts_json, language=language, store=store)
 
 
+def _bullet_run_after(text: str, heading_re: str):
+    """Bullet run under the LAST heading matching heading_re that actually has bullets beneath it
+    (a trailing "Note: … what's new …" line must not win)."""
+    lines = text.splitlines()
+    best = None
+    for i, ln in enumerate(lines):
+        if not re.search(heading_re, ln, re.I):
+            continue
+        run: list[str] = []
+        for nxt in lines[i + 1:]:
+            if re.match(r"\s*[•\-\*]\s+", nxt):
+                run.append(nxt.strip())
+            elif run:
+                break
+        if run:
+            best = "\n".join(run)
+    return best
+
+
 def notes_post_check(answer: str, cap: int) -> dict:
     """Deterministic check of the store what's-new the model wrote: the LAST fenced block in the
     answer is measured against the store cap. Returns {"chars", "cap", "ok", "block"}; block None if absent."""
     blocks = re.findall(r"```[a-zA-Z]*\s*\n(.*?)```", answer, re.S)
-    if not blocks:
-        return {"chars": 0, "cap": cap, "ok": False, "block": None}
-    block = blocks[-1].strip()
+    if blocks:
+        block = blocks[-1].strip()
+    else:
+        # free models sometimes skip the fence: take the bullet run after a "What's new" heading
+        block = _bullet_run_after(answer, r"what.?s\s+new")
+        if block is None:
+            return {"chars": 0, "cap": cap, "ok": False, "block": None}
     out = {"chars": len(block), "cap": cap, "ok": len(block) <= cap, "block": block}
     if not out["ok"]:
         # the fix, deterministically: keep whole bullets in order until the cap

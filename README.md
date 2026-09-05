@@ -25,7 +25,7 @@ payment-webhook payloads, git log).
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q                                   # 45 unit tests (tools + web), no LLM needed
+pytest -q                                   # 46 unit tests (tools + web), no LLM needed
 
 # deterministic scan, no LLM
 python -m release_keeper check examples/saju_listing_bad.txt --payments --category fortune --raw
@@ -146,8 +146,9 @@ pre-existing material by the same author informed it:
   `cancel_reason=CUSTOMER_SUPPORT`, never as a `REFUND` event) was learned while
   wiring the author's own app to RevenueCat; the dispatch logic is re-implemented here
   in Python, no code copied. Event/field vocabularies come from RevenueCat's public docs.
-- `examples/saju_1.1.17_gitlog.txt` is the author's real, unedited `git log --oneline` for that
-  app's 1.1.16 → 1.1.17 range (45 commits); `examples/saju_play_listing_live.txt` is the app's live
+- `examples/saju_1.1.17_gitlog.txt` is the author's real `git log --oneline` for that
+  app's 1.1.16 → 1.1.17 range, filtered to commits whose subject names the app (39 of 45; the
+  rest belonged to unrelated tracks in the same monorepo); `examples/saju_play_listing_live.txt` is the app's live
   Google Play listing (en-US) as pulled from the Play Developer API on 2026-09-05. Both are inputs
   for `docs/e2e_saju_1.1.17.md`.
 - `examples/rc_*.json` are anonymized, hand-written payloads in RevenueCat's webhook

@@ -96,3 +96,12 @@ def test_notes_post_check_measures_last_fenced_block():
     assert not notes_post_check("```\n" + "x" * 501 + "\n```", 500)["ok"]
     over = notes_post_check("```text\n" + "\n".join(f"• line {i} " + "y" * 60 for i in range(12)) + "\n```", 500)
     assert not over["ok"] and len(over["trimmed"]) <= 500 and over["trimmed"].startswith("• line 0")
+
+
+def test_notes_post_check_falls_back_to_bullets_under_heading():
+    from release_keeper.agent import notes_post_check
+    ans = "## 1.1.17\n- entry\n\n**Store What's New (Google Play)**\n• New: guest button\n• Fixed: language switch\n\n**Dropped as internal**\n0 items"
+    pc = notes_post_check(ans, 500)
+    assert pc["block"] == "• New: guest button\n• Fixed: language switch" and pc["ok"]
+    ans += "\n\n**Note**: the what's new above is derived from commits."
+    assert notes_post_check(ans, 500)["block"] == pc["block"]

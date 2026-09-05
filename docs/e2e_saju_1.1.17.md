@@ -7,20 +7,21 @@ OpenRouter. Times are wall-clock for one `python -m release_keeper …` call.
 | Step | Real input | Result | Time |
 |---|---|---|---|
 | ① `check` | live Google Play listing (en-US, 3836 chars, pulled from the Play Developer API) | `SHIP_WITH_FIXES` — 1 real yellow (no minimum-age line), 5 passed | raw 0.0 s · agent 7.8 s |
-| ③ `notes` | `git log --oneline` for the release range, 45 commits | agent rewrote 8 user-facing entries in plain English; store text **622/500 → blocked by the post-check**, trimmed version offered | 49.5 s |
+| ③ `notes` | `git log --oneline` for the release range, filtered to app-subject commits (39 of 45; the 6 dropped were unrelated tracks and two empty `Sage` index commits) | agent rewrote 8 user-facing entries in plain English; run 3: store text **622/500 → blocked by the post-check**, trimmed version offered; run 4 (filtered log): 364/500 OK, but the model skipped the code fence — the check now also reads the bullet run under the "What's new" heading | 49.5 s · 50.2 s |
 | ④ `listing --lang ko` | app facts distilled from the live listing (the app has **no Korean listing yet**) | brief → model wrote ko → `listing_check` OK, all fields under cap; CLI re-check agrees | 22–71 s |
 | ② `refund` | RevenueCat `CANCELLATION`/`CUSTOMER_SUPPORT` payload in the shape verified during the app's IAP test (anonymized) | class `refund`, revoke entitlement, reply drafted, Play-credentials warning | 3.9 s |
 
 ## What the real inputs taught the tools (fixed in this run)
 
-1. **A repo that commits per work session has no `feat:`/`fix:` commits.** All 45 commits in
-   the range were `chore(session): … [tlog]`. The first run produced an empty note without
+1. **A repo that commits per work session has no `feat:`/`fix:` commits.** 38 of the 39 commits in
+   the range were `chore(session): … [tlog]` (the other one `docs(saju)`). The first run produced an empty note without
    saying why. Now: `[tlog]` is not treated as noise, the warning names `include_internal`, and
    with it typed-internal commits get a keyword pass where an internal word (report, spec,
    design sample, measurement …) wins over a fix word — "report §9 correction" is a report.
-2. **The model does not count.** Asked for a store block under 500 characters it produced 622
+2. **The model does not count, and does not always fence.** Asked for a store block under 500 characters it produced 622
    with a confident "under 500 chars" label. The CLI and the web page measure the last fenced
-   block and fail (exit 1) with a trimmed-to-whole-bullets version. Same pattern as the
+   block and fail (exit 1) with a trimmed-to-whole-bullets version; when there is no fence they
+   fall back to the bullet run under the last "What's new" heading that has one. Same pattern as the
    listing re-check: the deterministic check has the last word.
 3. **The model copies drafts.** Given `store_whats_new` in the tool output it pasted the raw
    commit subjects into the store text. The agent-facing JSON now calls them
