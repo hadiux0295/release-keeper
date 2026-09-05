@@ -47,7 +47,8 @@ agent under `app/<Name>/main.py`. Two options, in order of preference:
    `agentcore add agent --help` / the generated `agentcore/agentcore.json` first.
 2. **CodeZip build** (default, no Docker): copy `release_keeper/` into the scaffold's `app/<Name>/`,
    make `main.py` do `from release_keeper.agentcore import app` and run uvicorn on 8080, add
-   `strands-agents[litellm]`, `fastapi`, `uvicorn` to its `pyproject.toml`.
+   `strands-agents[litellm]`, `fastapi`, `uvicorn` to its `pyproject.toml`. **Plan, not verified** —
+   how the CodeZip runtime starts `main.py` must be read from the generated scaffold first.
 
 Then:
 
@@ -55,8 +56,14 @@ Then:
 agentcore dev                      # local server + inspector (port 8080)
 agentcore deploy --verbose         # CDK bootstrap on first run
 agentcore status                   # runtime ARN
-agentcore invoke --prompt-file examples/invoke_check.json
+agentcore invoke --prompt "hello"       # free-text → agent branch
 ```
+
+`agentcore invoke --prompt-file` sends the file as *the prompt*; whether the CLI wraps it as
+`{"prompt": …}` (which would route the structured `{"tool": …}` payload to the agent branch) is
+**not verified**. For the structured payload use the paths that are verified: locally
+`curl -d @examples/invoke_check.json localhost:8080/invocations`, deployed
+`boto3 invoke_agent_runtime(payload=<raw JSON bytes>)` (Path B).
 
 Model credentials: the OpenRouter key goes in `agentcore/.env.local` / `agentcore add credential`
 (non-Bedrock provider), never in the repo. The runtime env must carry `RK_API_KEY`
