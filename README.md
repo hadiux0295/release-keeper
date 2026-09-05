@@ -25,7 +25,7 @@ payment-webhook payloads, git log).
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q                                   # tool unit tests, no LLM needed
+pytest -q                                   # 36 unit tests (tools + web), no LLM needed
 
 # deterministic scan, no LLM
 python -m release_keeper check examples/saju_listing_bad.txt --payments --category fortune --raw
@@ -48,13 +48,67 @@ python -m release_keeper notes  examples/gitlog_sample.txt --version 1.2.0
 python -m release_keeper listing examples/app_facts_example.json --lang ko --store play
 ```
 
-Measured with the default free model: `check` ~18 s, `refund` ~9 s, `notes` ~60 s (the model
-re-emits every entry), `listing` ~31 s (brief → draft → check chain). `--raw` is instant.
+Measured with the default free model: `check` ~5–18 s, `refund` ~9 s, `notes` ~21 s (was ~60 s
+before the tool payload was slimmed — entries are sent once, inside the markdown), `listing` ~31 s
+(brief → draft → check chain). `--raw` is instant. Each agent run prints
+`[seconds · input/output tokens · tool calls]` on stderr.
 `listing` re-runs `listing_check` deterministically on the JSON the agent returned and exits 1 on
 a red finding, so the model cannot talk its way past a cap or a missing disclosure.
 
+### Web page (same tools, one page)
+
+```bash
+pip install -e ".[web]"
+uvicorn release_keeper.web:app --host 0.0.0.0 --port 8090     # open http://localhost:8090
+```
+
+Four tabs, two buttons: **Run tool** (deterministic, no LLM, works without any key) and
+**Ask the agent**. Without an API key agent mode returns HTTP 503, the page and raw mode keep
+working. The listing tab re-runs `listing_check` on the model's JSON exactly like the CLI.
+`GET /health` reports the model id and whether agent mode is available; `/docs` is the OpenAPI UI.
+
 Environment: `RK_MODEL` (LiteLLM id, default `openai/nvidia/nemotron-3-super-120b-a12b:free`),
 `RK_API_BASE` (default OpenRouter), `RK_API_KEY`.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph inputs [Real inputs]
+        A[store / result-screen copy]
+        B[RevenueCat webhook JSON]
+        C[git log --oneline]
+        D[app facts JSON]
+    end
+    subgraph surface [Thin surface]
+        CLI[python -m release_keeper]
+        WEB[FastAPI one-page]
+    end
+    subgraph agent [Strands Agent]
+        M[LiteLLMModel → OpenRouter free tier / Bedrock / any OpenAI-compatible]
+        T1[disclosure_check]
+        T2[refund_triage]
+        T3[release_notes]
+        T4a[listing_brief]
+        T4b[listing_check]
+    end
+    A --> CLI & WEB
+    B --> CLI & WEB
+    C --> CLI & WEB
+    D --> CLI & WEB
+    CLI -- prompt --> M
+    WEB -- prompt --> M
+    M -- one call --> T1 & T2 & T3
+    M -- brief → write → check --> T4a --> T4b
+    T1 & T2 & T3 & T4b -- JSON --> M
+    M -- answer --> OUT[developer-readable answer]
+    T4b -. re-run independently .-> PC[post-check: red = exit 1 / verdict BLOCK]
+    CLI -- --raw --> T1 & T2 & T3 & T4a & T4b
+```
+
+Tools are deterministic Python; the model plans, calls, and explains. The only generative
+step (writing a store listing) is bracketed by a brief before and a check after, and the
+surface re-runs that check itself so the model cannot talk its way past it.
 
 ## Design
 
@@ -66,6 +120,10 @@ Environment: `RK_MODEL` (LiteLLM id, default `openai/nvidia/nemotron-3-super-120
   carry reasoning content across turns, so the agent is built as a tool chain, not a chat.
 - Findings are **risk flags with a concrete fix**, never legal verdicts. Anything not
   decidable from the inputs is returned under `needs_input`.
+- Severity: red = a store or refund reviewer will reject it; yellow = weakens the case
+  (e.g. "get personalized advice" framing softeners, hype `!`, missing renewal terms);
+  green = low-risk note.
+- The web page discloses its own model in the footer — the disclosure tool discloses itself.
 
 ## Reused material (disclosure per hackathon rules)
 

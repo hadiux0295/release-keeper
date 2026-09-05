@@ -69,6 +69,22 @@ class Notes:
     store_whats_new: str = ""
     warnings: list[str] = field(default_factory=list)
 
+    def to_agent_json(self) -> str:
+        """Slim view for the model: the entry lists are already in `markdown`, so only
+        unclassified keeps its source lines (the model must decide those). Cuts the tool
+        payload roughly in half versus to_json()."""
+        d = {
+            "version": self.version,
+            "counts": {k: len(getattr(self, k)) for k in ("breaking", "new", "improved", "fixed", "unclassified")},
+            "dropped": {"internal": self.dropped_internal, "noise": self.dropped_noise},
+            "markdown": self.markdown,
+            "store_whats_new": self.store_whats_new,
+            "store_whats_new_chars": len(self.store_whats_new),
+            "unclassified": [e.source for e in self.unclassified],
+            "warnings": self.warnings,
+        }
+        return json.dumps(d, ensure_ascii=False, indent=2)
+
     def to_json(self) -> str:
         d = asdict(self)
         d["counts"] = {k: len(getattr(self, k)) for k in ("breaking", "new", "improved", "fixed", "unclassified")}
@@ -215,5 +231,6 @@ def release_notes(git_log: str, version: str = "", language: str = "en", store: 
         store: "play" or "appstore" — selects the what's-new character cap.
         include_internal: Keep chore/docs/test commits in unclassified instead of dropping them.
     """
-    return run_release_notes(git_log, version=version or None, language=language, store=store,
-                             include_internal=include_internal).to_json()
+    n = run_release_notes(git_log, version=version or None, language=language, store=store,
+                          include_internal=include_internal)
+    return n.to_agent_json()

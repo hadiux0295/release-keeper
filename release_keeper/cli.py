@@ -19,25 +19,12 @@ from pathlib import Path
 
 
 def _run_agent(prompt: str) -> str:
-    from .agent import build_agent
-    agent = build_agent()
-    t0 = time.time()
-    result = agent(prompt)
-    print(result)
-    print(f"\n[{time.time()-t0:.1f}s]", file=sys.stderr)
-    return str(result)
-
-
-def _extract_json_block(text: str):
-    """Last fenced ```json block in the agent answer, or None."""
-    import re
-    blocks = re.findall(r"```json\s*(\{.*?\})\s*```", text, re.S)
-    for b in reversed(blocks):
-        try:
-            return json.loads(b)
-        except json.JSONDecodeError:
-            continue
-    return None
+    from .agent import run_agent
+    text, meta = run_agent(prompt)
+    print(text)
+    print(f"\n[{meta['seconds']:.1f}s · in {meta['input_tokens']} / out {meta['output_tokens']} tokens · {meta['tool_calls']} tool call(s)]",
+          file=sys.stderr)
+    return text
 
 
 def cmd_check(a) -> int:
@@ -99,11 +86,11 @@ def cmd_listing(a) -> int:
         f"Write the {a.store} store listing in language {a.lang!r} for the app described below. "
         f"Call listing_brief first (language={a.lang!r}, store={a.store!r}), write the listing, then call listing_check on it.\n\n---\n{facts}")
     # Independent verification: whatever the model claims, the deterministic check has the last word.
-    listing = _extract_json_block(answer)
+    from .agent import listing_post_check
+    listing, rep = listing_post_check(answer, facts, language=a.lang, store=a.store)
     if listing is None:
         print("\n[post-check] no fenced JSON listing found in the answer — cannot verify", file=sys.stderr)
         return 2
-    rep = run_listing_check(listing, facts, language=a.lang, store=a.store)
     print("\n[post-check] " + rep.to_json(), file=sys.stderr)
     return 0 if rep.verdict != "BLOCK" else 1
 

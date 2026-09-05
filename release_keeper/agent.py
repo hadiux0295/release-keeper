@@ -9,7 +9,10 @@ OpenRouter (free tier), Amazon Bedrock, or any OpenAI-compatible server.
 """
 from __future__ import annotations
 
+import json
 import os
+import re
+import time
 
 from strands import Agent
 from strands.models.litellm import LiteLLMModel
@@ -61,3 +64,41 @@ def build_agent(tools=None, callback_handler=None) -> Agent:
         system_prompt=SYSTEM_PROMPT,
         callback_handler=callback_handler,
     )
+
+
+def run_agent(prompt: str, agent: Agent | None = None) -> tuple[str, dict]:
+    """One request → (answer text, metrics). Shared by the CLI and the web page."""
+    agent = agent or build_agent()
+    t0 = time.time()
+    result = agent(prompt)
+    usage = getattr(result.metrics, "accumulated_usage", {}) or {}
+    tool_calls = sum(int(getattr(m, "call_count", 0)) for m in (getattr(result.metrics, "tool_metrics", None) or {}).values())
+    meta = {
+        "seconds": round(time.time() - t0, 1),
+        "input_tokens": usage.get("inputTokens", 0),
+        "output_tokens": usage.get("outputTokens", 0),
+        "tool_calls": tool_calls,
+        "model": os.environ.get("RK_MODEL", DEFAULT_MODEL),
+    }
+    return str(result), meta
+
+
+def extract_json_block(text: str):
+    """Last fenced ```json block in an agent answer, or None."""
+    blocks = re.findall(r"```json\s*(\{.*?\})\s*```", text, re.S)
+    for b in reversed(blocks):
+        try:
+            return json.loads(b)
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def listing_post_check(answer: str, app_facts_json: str, *, language: str, store: str):
+    """Independent verification of a listing the model wrote: the deterministic check has
+    the last word, whatever the model claimed. Returns (listing_dict | None, report | None)."""
+    from .tools import run_listing_check
+    listing = extract_json_block(answer)
+    if listing is None:
+        return None, None
+    return listing, run_listing_check(listing, app_facts_json, language=language, store=store)

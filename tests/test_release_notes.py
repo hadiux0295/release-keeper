@@ -57,3 +57,12 @@ def test_korean_headings_and_empty_log():
 def test_tool_wrapper_json():
     out = json.loads(release_notes(LOG, version="1.2.0"))
     assert out["counts"]["fixed"] >= 3 and out["store_whats_new_chars"] <= PLAY_WHATS_NEW_MAX
+
+
+def test_agent_json_is_slim_but_keeps_unclassified_sources():
+    n = run_release_notes(LOG, version="1.2.0")
+    slim = json.loads(n.to_agent_json())
+    full = json.loads(n.to_json())
+    assert "new" not in slim and "fixed" not in slim and slim["markdown"] == full["markdown"]
+    assert len(slim["unclassified"]) == len(full["unclassified"]) and all(isinstance(u, str) for u in slim["unclassified"])
+    assert len(n.to_agent_json()) < 0.6 * len(n.to_json())
