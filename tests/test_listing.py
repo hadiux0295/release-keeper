@@ -18,7 +18,7 @@ def test_ko_brief_carries_ko_template_and_facts():
     b = run_listing_brief(FACTS, language="ko", store="play")
     assert "AI 언어 모델(Google Gemini)" in b.disclosure_block
     assert "만 13세" in b.disclosure_block and "계정 삭제" in b.disclosure_block
-    assert FACTS["refund_line"] in b.disclosure_block
+    assert ("환불" in b.disclosure_block)  # en facts → default ko refund line
     assert "verbatim" in b.disclosure_instruction
     assert b.output_format["json_fields"] == ["title", "short_description", "full_description"]
 
@@ -76,3 +76,36 @@ def test_tool_wrappers_json():
     b = json.loads(listing_brief(json.dumps(FACTS), language="ko", store="play"))
     c = json.loads(listing_check(json.dumps(KO), json.dumps(FACTS), language="ko", store="play"))
     assert b["caps"]["short_description"] == 80 and c["verdict"] in ("OK", "SHIP_WITH_FIXES")
+
+
+def test_brief_flags_english_refund_line_for_ko():
+    import json
+    from release_keeper.tools import run_listing_brief
+    facts = json.loads((EX / "app_facts_example.json").read_text(encoding="utf-8"))
+    facts["refund_line"] = "Pro renews monthly until you cancel; cancel anytime in Google Play."
+    b = json.loads(run_listing_brief(facts, language="ko", store="play").to_json())
+    assert "renews monthly" not in b["disclosure_block"] and "환불" in b["disclosure_block"]
+    assert "needs_input" in b["disclosure_instruction"]
+    facts["refund_line"] = "구매 후 7일 이내 환불 가능."
+    b = json.loads(run_listing_brief(facts, language="ko", store="play").to_json())
+    assert "구매 후 7일" in b["disclosure_block"] and "needs_input" not in b["disclosure_instruction"]
+
+
+def test_check_flags_english_line_in_ko_description():
+    import json
+    from release_keeper.tools import run_listing_check
+    facts = (EX / "app_facts_example.json").read_text(encoding="utf-8")
+    draft = json.loads((EX / "listing_ko_draft.json").read_text(encoding="utf-8"))
+    draft["full_description"] += "\nPro renews monthly until you cancel; cancel anytime in Google Play. Refunds follow Google Play policy."
+    rep = run_listing_check(draft, facts, language="ko", store="play")
+    assert rep.verdict == "BLOCK" and any(f["item"] == "untranslated_line" for f in rep.findings)
+
+
+def test_check_flags_duplicate_sentence():
+    import json
+    from release_keeper.tools import run_listing_check
+    facts = (EX / "app_facts_example.json").read_text(encoding="utf-8")
+    draft = json.loads((EX / "listing_ko_draft.json").read_text(encoding="utf-8"))
+    draft["full_description"] += "\n설정에서 계정 삭제 및 데이터 삭제가 가능합니다."
+    rep = run_listing_check(draft, facts, language="ko", store="play")
+    assert any(f["item"] == "duplicate_line" for f in rep.findings)

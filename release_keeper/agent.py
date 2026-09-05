@@ -111,4 +111,13 @@ def notes_post_check(answer: str, cap: int) -> dict:
     if not blocks:
         return {"chars": 0, "cap": cap, "ok": False, "block": None}
     block = blocks[-1].strip()
-    return {"chars": len(block), "cap": cap, "ok": len(block) <= cap, "block": block}
+    out = {"chars": len(block), "cap": cap, "ok": len(block) <= cap, "block": block}
+    if not out["ok"]:
+        # the fix, deterministically: keep whole bullets in order until the cap
+        kept: list[str] = []
+        for line in block.splitlines():
+            if len("\n".join(kept + [line])) > cap:
+                break
+            kept.append(line)
+        out["trimmed"] = "\n".join(kept)
+    return out

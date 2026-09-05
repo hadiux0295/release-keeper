@@ -35,6 +35,8 @@ CERTAINTY_PATTERNS = [
     r"\btrue destiny", r"\bknow (exactly )?what (will|is going to)",
     # Korean: skip the negated forms used in disclaimers ("예언이 아닙니다", "보장하지 않습니다")
     r"예언(?![^.]{0,30}(아니|아닙|아님|않))", r"정확한 예측(?![^.]{0,30}(아니|아닙|아님|않))", r"반드시", r"보장(?![^.]{0,8}(않|아니|아닙))",
+    # "정확한 사주/운세/풀이/해석" = accuracy claim for the reading itself ("정확한 생년월일" = accurate birth data, fine)
+    r"정확한\s*(사주|운세|풀이|해석|분석|리딩)(?![^.]{0,30}(아니|아닙|아님|않))",
 ]
 # Softeners: copy that does not *claim* accuracy but invites the reader to act on the output as advice.
 # Korean forms anchor on the verb (받다/구하다/신청) so the disclaimer noun phrase "조언이 아닙니다" never matches.
@@ -42,7 +44,9 @@ SOFTENER_PATTERNS = [
     r"\b(get|receive|seek|ask for)\s+(personali[sz]ed\s+|personal\s+|expert\s+|tailored\s+)?(advice|guidance|counsel(l)?ing|recommendations?)\b",
     r"\b(our|the|your)\s+(ai|reading|fortune|master|expert)\s+(will\s+)?(tell|guide|advise)s?\b",
     r"\bfind out (exactly )?(what|when|whether) (you should|to do)\b",
-    r"조언(을|를)?\s*(받|구하|들어)", r"상담(을|를)?\s*(받|신청|해\s?보)", r"(해야\s?할지|어떻게\s?해야)\s*(알려|확인)",
+    r"조언(을|를)?\s*(받|구하|들어)", r"상담(을|를)?\s*(받|신청|해\s?보)",
+    # affirmative "조언" anywhere (e.g. "한 줄 조언") — the disclaimer's "조언이 아닙니다" is excluded by the lookahead
+    r"조언(?!\s*(이|은|을|를)?\s*(아니|아닙|아님|않))", r"(해야\s?할지|어떻게\s?해야)\s*(알려|확인)",
     r"결정(을|를)?\s*(도와|맡)",
 ]
 ADVICE_PATTERN = r"\b(medical|financial|legal|psychological|investment|health)\s+advice\b"

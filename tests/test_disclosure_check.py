@@ -92,3 +92,14 @@ def test_renewal_phrasing_variants_pass():
          "Pro, US$6.99 per month. It renews monthly until you cancel, and you can cancel anytime in Google Play. You must be 13 or older.")
     r = run_disclosure_check(t, has_payments=True, category="fortune")
     assert "auto_renew_disclosure" not in {f.item for f in r.findings}, r.to_json()
+
+
+def test_ko_affirmative_advice_and_accuracy_claims():
+    """Measured 09-05 on a model-written ko listing: '한 줄 조언' and '정확한 사주 기반' passed as OK."""
+    t = ("오늘 — 정확한 사주 기반 오늘의 운세와 한 줄 조언. 모든 결과는 AI 언어 모델(Google Gemini)이 생성합니다. "
+         "성찰과 재미를 위한 것으로, 미래에 대한 예언이나 의학·심리·법률·금융 조언이 아닙니다.")
+    items = {f.item: f.severity for f in run_disclosure_check(t, category="fortune").findings}
+    assert items.get("overstated_claim") == "red" and items.get("framing_softener") == "yellow", items
+    ok = "정확한 생년월일시를 입력하세요. 모든 결과는 AI 언어 모델(Google Gemini)이 생성합니다. 성찰과 재미를 위한 것으로, 의학·심리·법률·금융 조언이 아닙니다."
+    items = {f.item: f.severity for f in run_disclosure_check(ok, category="fortune").findings}
+    assert "overstated_claim" not in items and "framing_softener" not in items, items

@@ -56,7 +56,7 @@ def test_korean_headings_and_empty_log():
 
 def test_tool_wrapper_json():
     out = json.loads(release_notes(LOG, version="1.2.0"))
-    assert out["counts"]["fixed"] >= 3 and out["store_whats_new_chars"] <= PLAY_WHATS_NEW_MAX
+    assert out["counts"]["fixed"] >= 3 and len(out["draft_store_whats_new"]) <= out["store_cap"] == PLAY_WHATS_NEW_MAX
 
 
 def test_agent_json_is_slim_but_keeps_unclassified_sources():
@@ -94,3 +94,5 @@ def test_notes_post_check_measures_last_fenced_block():
     assert pc["ok"] and pc["chars"] == len("• Fixed: language switch bug\n• New: guest exit button")
     assert notes_post_check("no block here", 500)["block"] is None
     assert not notes_post_check("```\n" + "x" * 501 + "\n```", 500)["ok"]
+    over = notes_post_check("```text\n" + "\n".join(f"• line {i} " + "y" * 60 for i in range(12)) + "\n```", 500)
+    assert not over["ok"] and len(over["trimmed"]) <= 500 and over["trimmed"].startswith("• line 0")

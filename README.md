@@ -17,7 +17,7 @@ payment-webhook payloads, git log).
 |---|---|
 | `disclosure_check` — scan copy for AI disclosure, framing, refund/deletion/age/crisis lines | ✅ |
 | `refund_triage` — classify a RevenueCat webhook event, say what to do to the entitlement, draft the reply (en/ko) | ✅ |
-| `release_notes` — turn `git log --oneline` into New/Improved/Fixed notes + store 'what's new' under the Play cap | ✅ |
+| `release_notes` — turn `git log --oneline` into New/Improved/Fixed notes + store 'what's new' under the Play cap; the CLI/web re-measure the block the model wrote | ✅ |
 | `listing_brief` + `listing_check` — caps, structure and the disclosure block for the model to write from, then a deterministic check of what it wrote (Play / App Store, en·ko fully checked, other languages structural + native-review flag) | ✅ |
 
 ## Quick start
@@ -25,7 +25,7 @@ payment-webhook payloads, git log).
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q                                   # 37 unit tests (tools + web), no LLM needed
+pytest -q                                   # 44 unit tests (tools + web), no LLM needed
 
 # deterministic scan, no LLM
 python -m release_keeper check examples/saju_listing_bad.txt --payments --category fortune --raw
@@ -69,6 +69,12 @@ working. The listing tab re-runs `listing_check` on the model's JSON exactly lik
 
 Environment: `RK_MODEL` (LiteLLM id, default `openai/nvidia/nemotron-3-super-120b-a12b:free`),
 `RK_API_BASE` (default OpenRouter), `RK_API_KEY`.
+
+## Tested on a real release
+
+[`docs/e2e_saju_1.1.17.md`](docs/e2e_saju_1.1.17.md) — one pass of all four tools over the author's
+live app (real Play listing, real 45-commit release range, the missing Korean listing). Seven
+things the real inputs broke, what was fixed, and what still needs a human.
 
 ## Architecture
 

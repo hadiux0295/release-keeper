@@ -76,6 +76,8 @@ def cmd_notes(a) -> int:
         print("\n[post-check] no fenced store block found in the answer — cannot verify the cap", file=sys.stderr)
         return 2
     print(f"\n[post-check] store what's-new {pc['chars']}/{pc['cap']} chars — {'OK' if pc['ok'] else 'OVER CAP'}", file=sys.stderr)
+    if not pc["ok"]:
+        print(f"[post-check] trimmed to whole bullets under the cap ({len(pc['trimmed'])} chars):\n{pc['trimmed']}", file=sys.stderr)
     return 0 if pc["ok"] else 1
 
 

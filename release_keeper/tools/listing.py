@@ -19,6 +19,7 @@ name 30 / subtitle 30 / promotional text 170 / description 4000 / keywords 100 b
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, asdict, field
 from typing import Any, Optional
 
@@ -52,8 +53,9 @@ DISCLOSURE_TEMPLATES = {
 FULLY_CHECKED_LANGS = set(DISCLOSURE_TEMPLATES)  # languages tool 1's vocab covers
 
 DEFAULT_REFUND_LINE = {
-    "en": "Refunds within 7 days of purchase. Subscriptions renew automatically until cancelled; cancel anytime in the store's subscription settings.",
-    "ko": "구매 후 7일 이내 환불 가능. 구독은 해지 전까지 자동 갱신되며 스토어 구독 설정에서 언제든 해지할 수 있습니다.",
+    # Neutral by design: the tool must not invent a refund window the developer never promised.
+    "en": "Refunds follow the store's refund policy. Subscriptions renew automatically until cancelled; cancel anytime in the store's subscription settings.",
+    "ko": "환불은 스토어의 환불 정책을 따릅니다. 구독은 해지 전까지 자동 갱신되며 스토어 구독 설정에서 언제든 해지할 수 있습니다.",
 }
 
 
@@ -102,6 +104,13 @@ def _facts(app_facts: Any) -> dict:
     return json.loads(app_facts) if isinstance(app_facts, str) else dict(app_facts)
 
 
+def _looks_like(text: str, lang: str) -> bool:
+    """Cheap script check: ko = contains Hangul."""
+    if lang == "ko":
+        return re.search(r"[\uac00-\ud7a3]", text) is not None
+    return True
+
+
 def build_disclosure_block(app: dict, language: str) -> tuple[str, str]:
     """Returns (block, instruction). For unsupported languages the block is English + a translate-verbatim instruction."""
     lang = language if language in DISCLOSURE_TEMPLATES else "en"
@@ -109,14 +118,24 @@ def build_disclosure_block(app: dict, language: str) -> tuple[str, str]:
     model = app.get("model_name") or "<model name>"
     lines = [t["ai"].format(model_name=model), t["framing"]]
     if app.get("has_payments"):
-        lines.append(app.get("refund_line") or DEFAULT_REFUND_LINE[lang])
+        refund = app.get("refund_line")
+        if refund and lang != "en" and not _looks_like(refund, lang):
+            # facts are usually written in English; the model copies an English refund line verbatim into a ko
+            # listing even when told to translate (measured 09-05, 2/2 runs) — so use the language's default
+            # line deterministically and ask the developer to confirm it matches their policy.
+            refund = None
+        lines.append(refund or DEFAULT_REFUND_LINE[lang])
     if app.get("has_payments") or app.get("has_accounts"):
         lines.append(t["age"].format(min_age=app.get("min_age", 13)))
     if app.get("has_accounts"):
         lines.append(t["deletion"])
     block = "\n".join(lines)
     if language in DISCLOSURE_TEMPLATES:
-        instr = "Include this block verbatim at the end of the full description. Do not soften or shorten it."
+        instr = ("Include this block verbatim at the end of the full description. Do not soften or shorten it. "
+                 "Write everything else in the target language only — no English sentences from the facts.")
+        if app.get("has_payments") and app.get("refund_line") and lang != "en" and not _looks_like(app["refund_line"], lang):
+            instr += (f" NOTE: refund_line in the facts is not {language}; the default {language} refund line was used — "
+                      "developer must confirm it matches the actual policy (needs_input).")
     else:
         instr = (f"Translate this English block into {language} faithfully, keeping the model name '{model}' unchanged, "
                  "and place it at the end of the full description. Flag it for native-speaker review.")
@@ -198,6 +217,18 @@ def run_listing_check(listing: Any, app_facts: Any, *, language: str = "en", sto
 
     # 2. disclosure scan on the full description
     full = L.get("full_description") or ""
+    lines_ = [ln.strip() for ln in full.splitlines() if len(ln.strip()) > 20]
+    dups = sorted({ln for ln in lines_ if lines_.count(ln) > 1})
+    if dups:
+        r.add("yellow", "duplicate_line", f"{len(dups)} sentence(s) appear twice in the description, e.g. \"{dups[0][:60]}\".",
+              "Keep one copy — usually the one inside the disclosure block.")
+    if language == "ko":
+        leaked = [ln.strip() for ln in full.splitlines()
+                  if len(re.findall(r"[A-Za-z]{2,}", ln)) >= 6 and not re.search(r"[\uac00-\ud7a3]", ln)]
+        if leaked:
+            r.add("red", "untranslated_line",
+                  f"{len(leaked)} English sentence(s) inside the ko description, e.g. \"{leaked[0][:70]}\" — facts text copied verbatim.",
+                  "Translate the line into Korean (or use the default ko refund line from listing_brief).")
     model = (app.get("model_name") or "").lower()
     if language in FULLY_CHECKED_LANGS:
         rep = run_disclosure_check(

@@ -38,12 +38,12 @@ NOISE_PATTERNS = [
 KW_FIXED = [r"\bfix(e[sd])?\b", r"\bbug\b", r"\bcrash", r"\bbroken\b", r"\bregression\b", r"\bhotfix\b",
             r"수정", r"버그", r"오류", r"고침", r"크래시", r"정정"]
 KW_NEW = [r"\badd(s|ed)?\b", r"\bnew\b", r"\bintroduc", r"\blaunch", r"\bsupport for\b", r"\benable[sd]?\b",
-          r"추가", r"신규", r"신설", r"도입", r"지원"]
+          r"추가", r"신규", r"신설", r"도입", r"지원", r"구현"]
 KW_IMPROVED = [r"\bimprov", r"\bfaster\b", r"\bspeed", r"\bpolish", r"\bbetter\b", r"\brefine", r"\bupdate[sd]?\b",
                r"\bredesign", r"\brestyl", r"개선", r"향상", r"통일", r"정리", r"리디자인", r"교체"]
 KW_INTERNAL = [r"\bdocs?\b", r"\breadme\b", r"\btests?\b", r"\bci\b", r"\blint", r"\brefactor", r"\bcleanup",
                r"\binternal\b", r"\bscaffold", r"\bworklog", r"\bhandoff", r"세션", r"검수", r"리포트", r"문서", r"기록",
-               r"design_lab", r"샘플", r"검토", r"실측", r"진단"]
+               r"design_lab", r"샘플", r"검토", r"실측", r"진단", r"스펙", r"지시", r"설계", r"회고", r"판정", r"조사"]
 KW_BREAKING = [r"\bbreaking\b", r"\bremoved? support\b", r"\bdrop(s|ped)? support\b", r"\bmigrat", r"\brequires? (re-?login|reinstall)",
                r"호환 불가", r"재로그인", r"재설치"]
 
@@ -139,7 +139,7 @@ def parse_line(raw: str) -> Optional[Entry]:
             # A typed-internal commit whose subject still describes user-visible work (session-index
             # style "chore(session): fixed X, shipped Y") gets a keyword pass; the caller decides via
             # include_internal whether these are kept at all.
-            kw = _keyword_kind(subject)
+            kw = _keyword_kind(subject, strict=True)
             return Entry(text, "internal", raw.strip(), scope, "conventional", keyword_kind=kw)
         return Entry(text, "unclassified", raw.strip(), scope, "conventional")
 
@@ -149,11 +149,13 @@ def parse_line(raw: str) -> Optional[Entry]:
     return Entry(text, kind or "unclassified", raw.strip(), None, "keyword" if kind else "none")
 
 
-def _keyword_kind(subject: str) -> Optional[str]:
-    """breaking | internal | fixed | new | improved from the EN/KO keyword lists, or None."""
+def _keyword_kind(subject: str, strict: bool = False) -> Optional[str]:
+    """breaking | internal | fixed | new | improved from the EN/KO keyword lists, or None.
+    strict (typed-internal commits): any internal keyword wins, even next to a fix keyword —
+    "report §9 correction" is a report, not a user-visible fix."""
     if _match_any(subject, KW_BREAKING):
         return "breaking"
-    if _match_any(subject, KW_INTERNAL) and not _match_any(subject, KW_FIXED):
+    if _match_any(subject, KW_INTERNAL) and (strict or not _match_any(subject, KW_FIXED)):
         return "internal"
     for kind, kws in (("fixed", KW_FIXED), ("new", KW_NEW), ("improved", KW_IMPROVED)):
         if _match_any(subject, kws):
