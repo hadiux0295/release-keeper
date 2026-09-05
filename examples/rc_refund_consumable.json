@@ -1,0 +1,23 @@
+{
+  "api_version": "1.0",
+  "event": {
+    "id": "evt_example_0001",
+    "type": "CANCELLATION",
+    "cancel_reason": "CUSTOMER_SUPPORT",
+    "app_user_id": "user_example_a1b2",
+    "original_app_user_id": "user_example_a1b2",
+    "aliases": ["user_example_a1b2"],
+    "product_id": "credits_5",
+    "period_type": "NORMAL",
+    "store": "PLAY_STORE",
+    "environment": "PRODUCTION",
+    "country_code": "KR",
+    "currency": "KRW",
+    "price": 3.49,
+    "price_in_purchased_currency": 4900,
+    "purchased_at_ms": 1788400000000,
+    "expiration_at_ms": null,
+    "event_timestamp_ms": 1788500000000,
+    "transaction_id": "GPA.0000-0000-0000-00000"
+  }
+}

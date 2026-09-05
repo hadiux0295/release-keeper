@@ -1,0 +1,15 @@
+{
+  "api_version": "1.0",
+  "event": {
+    "id": "evt_example_0004",
+    "type": "BILLING_ISSUE",
+    "app_user_id": "user_example_g7h8",
+    "product_id": "app_pro_monthly:p1m",
+    "period_type": "NORMAL",
+    "store": "PLAY_STORE",
+    "environment": "PRODUCTION",
+    "expiration_at_ms": 1790400000000,
+    "grace_period_expiration_at_ms": 1791000000000,
+    "event_timestamp_ms": 1788500000000
+  }
+}

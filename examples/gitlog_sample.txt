@@ -1,0 +1,34 @@
+a1b2c3d chore(gen): tlog 2026-09-05T05:56Z [oci-autocommit]
+b2c3d4e chore(session): saju vC21 share card: gallery 20 PNG rendered [tlog]
+c88d108 fix(saju): vC19 M1 — 약관/privacy 게스트(익명) 세션 고지 + 게스트 데이터 삭제 CTA(서버가 익명 au
+58520ba fix(saju): vC19 H2(b)+H1 — 익명 자동진입은 최초 실행 1회로 제한(로그아웃/삭제→LoginGate), 익명
+783c478 chore(sync): 08-27 PC 작업분 수신 — saju today/W 시리즈·node_sync base-aware 브릿지
+47a0467 feat(saju): Production Access 승인 반영 + 테스터 캠페인 회고·릴리즈 노트
+55b1d9c chore(saju): S22측 미커밋 잔재 정리 — Production Access 신청서 3종 + play 스크립트 + 카피/
+291d824 log(saju): TestersCommunity 08-15 현황 갱신 — 9/16(61%)
+3351016 sync(node): S22↔OCI-1 2-way 정합 + 백로그 커밋
+b24e65b fix(node-sync): A conflict 2건 해소(PC 정본 전파) + .sync-trash 백업 패턴 추가
+0e0a307 chore(saju): 테스터 상태 체크 갱신 + Play Console API 릴리즈 업로드 스크립트 추가
+9a7fcc1 feat(saju): 런처 아이콘 4기둥 디자인 반영 (vC16 빌드 포함분)
+9fbdc5f docs(saju): vC16 커밋 후 S22/OCI-1 릴리즈빌드 불가 확정 + 테스터 체크 절차 순차화
+879ffe5 feat(saju): vC16(1.1.13) — 크레딧표시 UI버그 수정 + RC identity 방어 + Firebase Ana
+c7bf446 fix(saju): 헤더 상단 겹침 근본수정 — env(safe-area-inset-top) → var(--safe-area-in
+527fcd7 fix(saju): package-lock.json 드리프트 근본수정 — npm ci 정상화
+cfcec36 fix(saju): 크레딧10팩 부분환불 문안 정합화 + 무료쿼터 이중소모 이월건 종결
+40c72b7 feat(saju): 계정삭제 플로우 신설 + RC 실가격(현지통화) 표시 전환
+8d54ad4 fix(saju): vC9 — StatusBar 제거·DARK 고정, 버전표시+빌드 drift 방지, Publisher API 스
+e482c51 sync(node): OCI-1 2-way 동기화 + node_sync_check_s22.sh proot 경로 버그 수정
+326fb50 sync(node): S22 08-01 세션 잔여 미커밋분 정리
+cfa4647 sync(node): PC 07-31~08-01 커밋분 반영 + S22 자체 미커밋 잔여분 정리
+8ed5d7d fix(saju,li,sync): saju 웹훅 진단로그 추가 + XPRIZE 타임라인 정정 + LI 쇼츠/애드센스/롱폼 누적분
+29f451b chore(sync): S22↔OCI-1 노드 동기화分 반영 — wiki/work_logs 누적분, saju paddle 제거,
+462a898 feat(saju): 웹 전용 GA4 + Consent Mode v2 설치 (측정ID G-XXXXXXXX)
+bb75e97 feat(saju): 상시 업그레이드 pill + safe-area 상단여백 + 13세 age-gate, 출생 tz 글로벌화 (9
+c3d4e5f feat(saju)!: sign-in now requires re-login after the auth migration
+d4e5f6a perf(saju): daily reading loads 40% faster on first open
+e5f6a7b Fix crash when opening the share card on Android 12
+f6a7b8c Add Japanese store listing
+a7b8c9d Improve dark theme contrast on result cards
+b8c9d0e Merge branch 'feature/share-card'
+c9d0e1f 결과 카드 저장 버튼 오류 수정
+d0e1f2a tweak spacing

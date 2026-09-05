@@ -1,0 +1,19 @@
+{
+  "api_version": "1.0",
+  "event": {
+    "id": "evt_example_0002",
+    "type": "CANCELLATION",
+    "cancel_reason": "CUSTOMER_SUPPORT",
+    "app_user_id": "user_example_c3d4",
+    "product_id": "app_pro_monthly:p1m",
+    "period_type": "NORMAL",
+    "store": "PLAY_STORE",
+    "environment": "PRODUCTION",
+    "country_code": "US",
+    "currency": "USD",
+    "price": 4.99,
+    "purchased_at_ms": 1787800000000,
+    "expiration_at_ms": 1790400000000,
+    "event_timestamp_ms": 1788500000000
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "api_version": "1.0",
+  "event": {
+    "id": "evt_example_0003",
+    "type": "CANCELLATION",
+    "cancel_reason": "UNSUBSCRIBE",
+    "app_user_id": "user_example_e5f6",
+    "product_id": "app_pro_monthly:p1m",
+    "period_type": "NORMAL",
+    "store": "PLAY_STORE",
+    "environment": "PRODUCTION",
+    "expiration_at_ms": 1790400000000,
+    "event_timestamp_ms": 1788500000000
+  }
+}

@@ -16,8 +16,8 @@ payment-webhook payloads, git log).
 | Tool | State |
 |---|---|
 | `disclosure_check` — scan copy for AI disclosure, framing, refund/deletion/age/crisis lines | ✅ |
-| `refund_triage` — classify a RevenueCat-style event and draft a reply | planned |
-| `release_notes` — turn `git log` into user-facing notes | planned |
+| `refund_triage` — classify a RevenueCat webhook event, say what to do to the entitlement, draft the reply (en/ko) | ✅ |
+| `release_notes` — turn `git log --oneline` into New/Improved/Fixed notes + store 'what's new' under the Play cap | ✅ |
 | `listing_writer` — localized store listing from a feature list | planned |
 
 ## Quick start
@@ -30,10 +30,21 @@ pytest -q                                   # tool unit tests, no LLM needed
 # deterministic scan, no LLM
 python -m release_keeper check examples/saju_listing_bad.txt --payments --category fortune --raw
 
-# agent run (OpenAI-compatible endpoint; OpenRouter free tier by default)
+# refund triage from a RevenueCat webhook body (no LLM)
+python -m release_keeper refund examples/rc_refund_consumable.json --products examples/products.json --raw
+
+# release notes from a git log (no LLM); omit the file to run git yourself: --repo . --since v1.1.0
+python -m release_keeper notes examples/gitlog_sample.txt --version 1.2.0 --raw
+
+# agent runs (OpenAI-compatible endpoint; OpenRouter free tier by default)
 export OPENROUTER_API_KEY=...
-python -m release_keeper check examples/saju_listing_bad.txt --payments --category fortune
+python -m release_keeper check  examples/saju_listing_bad.txt --payments --category fortune
+python -m release_keeper refund examples/rc_refund_subscription.json --products examples/products.json --app-name "My App"
+python -m release_keeper notes  examples/gitlog_sample.txt --version 1.2.0
 ```
+
+Measured with the default free model: `check` ~18 s, `refund` ~9 s, `notes` ~60 s (the model
+re-emits every entry). `--raw` is instant.
 
 Environment: `RK_MODEL` (LiteLLM id, default `openai/nvidia/nemotron-3-super-120b-a12b:free`),
 `RK_API_BASE` (default OpenRouter), `RK_API_KEY`.
@@ -57,8 +68,13 @@ pre-existing material by the same author informed it:
   no text copied).
 - Example listing copy in `examples/` is adapted from the author's own published app
   ([Saju Club](https://saju.hun-is.com)).
-- The refund-event classification rule (planned tool) comes from the author's own
-  RevenueCat webhook handling experience.
+- The refund-event rule in `refund_triage` (a refund arrives as `CANCELLATION` +
+  `cancel_reason=CUSTOMER_SUPPORT`, never as a `REFUND` event) was learned while
+  wiring the author's own app to RevenueCat; the dispatch logic is re-implemented here
+  in Python, no code copied. Event/field vocabularies come from RevenueCat's public docs.
+- `examples/rc_*.json` are anonymized, hand-written payloads in RevenueCat's webhook
+  shape; `examples/gitlog_sample.txt` is a trimmed slice of the author's real commit
+  history plus a few synthetic lines that exercise the classifier.
 
 ## License
 

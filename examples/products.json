@@ -1,0 +1,5 @@
+{
+  "credits_1": {"kind": "consumable", "label": "1 Deep Reading credit", "grant": "1 credit"},
+  "credits_5": {"kind": "consumable", "label": "5 Deep Reading credits", "grant": "5 credits"},
+  "app_pro_monthly": {"kind": "subscription", "label": "Pro monthly", "grant": "pro plan"}
+}
