@@ -102,6 +102,24 @@ def _anyre(text: str, patterns: list[str]) -> Optional[str]:
     return None
 
 
+_SENT_SPLIT = re.compile(r"(?<=[.!?。\n])\s+")
+_PROFESSIONAL = ["professional", "licensed", "qualified", "전문", "전문가", "의사", "상담사"]
+
+
+def _softener_hit(t: str) -> Optional[str]:
+    """First softener phrase, except when its sentence is itself a referral to real help:
+    a crisis line ("if you are in crisis, seek professional counseling") or a professional
+    referral must not be flagged as weak framing — that sentence is what the crisis check asks for."""
+    for sent in _SENT_SPLIT.split(t):
+        hit = _anyre(sent, SOFTENER_PATTERNS)
+        if not hit:
+            continue
+        if _any(sent, CRISIS_WORDS) or _any(sent, _PROFESSIONAL):
+            continue
+        return hit
+    return None
+
+
 def run_disclosure_check(
     text: str,
     *,
@@ -143,7 +161,7 @@ def run_disclosure_check(
               f"Copy offers \"{adv.group(0)}\" without disclaiming it; may read as regulated professional advice.",
               "Remove the advice claim or add: \"not medical, psychological, legal, or financial advice\".")
 
-    soft = _anyre(t, SOFTENER_PATTERNS)
+    soft = _softener_hit(t)
     if soft:
         r.add("yellow", "framing_softener",
               f"Phrase \"{soft}\" invites users to act on the output as advice, even if no accuracy is claimed; "

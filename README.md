@@ -25,7 +25,7 @@ payment-webhook payloads, git log).
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q                                   # 36 unit tests (tools + web), no LLM needed
+pytest -q                                   # 37 unit tests (tools + web), no LLM needed
 
 # deterministic scan, no LLM
 python -m release_keeper check examples/saju_listing_bad.txt --payments --category fortune --raw

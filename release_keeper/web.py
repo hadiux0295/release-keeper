@@ -26,7 +26,9 @@ from .tools import run_disclosure_check, run_refund_triage, run_release_notes, r
 
 app = FastAPI(title="ReleaseKeeper", version="0.1.0", docs_url="/docs")
 
-_MODEL = os.environ.get("RK_MODEL", "openai/nvidia/nemotron-3-super-120b-a12b:free")
+from .agent import DEFAULT_MODEL
+
+_MODEL = os.environ.get("RK_MODEL", DEFAULT_MODEL)
 
 
 def _has_key() -> bool:

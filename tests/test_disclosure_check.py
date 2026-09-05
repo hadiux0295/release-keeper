@@ -74,3 +74,14 @@ def test_softener_ignores_negated_disclaimer():
     draft = json.loads((ex / "listing_ko_draft.json").read_text(encoding="utf-8"))["full_description"]
     r = run_disclosure_check(draft, has_payments=True, has_accounts=True, category="fortune")
     assert "framing_softener" not in {f.item for f in r.findings}, r.to_json()
+
+
+def test_softener_exempts_crisis_and_professional_referral():
+    t = ("위기 상황이라면 전문 상담을 받으세요 (findahelpline.com). If you are in crisis, please seek professional counseling. "
+         "모든 결과는 AI 언어 모델(Google Gemini)이 생성합니다. 성찰과 재미를 위한 것으로, 의학·심리·법률·금융 조언이 아닙니다.")
+    r = run_disclosure_check(t, has_free_text_emotional_input=True, category="wellness")
+    assert "crisis_referral" in r.passed
+    assert "framing_softener" not in {f.item for f in r.findings}, r.to_json()
+    # the same verb outside a referral sentence still fires
+    r = run_disclosure_check(t + " 오늘의 연애운에 대해 조언을 받아보세요.", has_free_text_emotional_input=True, category="wellness")
+    assert "framing_softener" in {f.item for f in r.findings}
