@@ -25,7 +25,7 @@ payment-webhook payloads, git log).
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q                                   # 46 unit tests (tools + web), no LLM needed
+pytest -q                                   # 51 unit tests (tools + web), no LLM needed
 
 # deterministic scan, no LLM
 python -m release_keeper check examples/saju_listing_bad.txt --payments --category fortune --raw
@@ -69,6 +69,19 @@ working. The listing tab re-runs `listing_check` on the model's JSON exactly lik
 
 Environment: `RK_MODEL` (LiteLLM id, default `openai/nvidia/nemotron-3-super-120b-a12b:free`),
 `RK_API_BASE` (default OpenRouter), `RK_API_KEY`.
+
+## Amazon Bedrock AgentCore Runtime
+
+The AgentCore HTTP contract (`POST /invocations`, `GET /ping`, port 8080, ARM64 `Dockerfile`) is
+implemented in `release_keeper/agentcore.py` on top of the same app and verified locally.
+**Not deployed as of 2026-09-05** (no AWS account yet) — status and the deploy runbook are in
+[`docs/agentcore.md`](docs/agentcore.md).
+
+```bash
+uvicorn release_keeper.agentcore:app --host 0.0.0.0 --port 8080
+curl localhost:8080/ping
+curl -X POST localhost:8080/invocations -H 'content-type: application/json' -d @examples/invoke_check.json
+```
 
 ## Tested on a real release
 
