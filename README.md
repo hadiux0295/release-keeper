@@ -86,7 +86,8 @@ curl -X POST localhost:8080/invocations -H 'content-type: application/json' -d @
 ## Tested on a real release
 
 [`docs/e2e_saju_1.1.17.md`](docs/e2e_saju_1.1.17.md) — one pass of all four tools over the author's
-live app (real Play listing, real 45-commit release range, the missing Korean listing). Seven
+live app (real Play listing, the real release range — 39 of its 45 commits, filtered to app-subject
+ones — and the missing Korean listing). Seven
 things the real inputs broke, what was fixed, and what still needs a human.
 
 ## Architecture
@@ -153,8 +154,10 @@ pre-existing material by the same author informed it:
   pre-launch review checklist used for their own apps (rules re-implemented as generic code;
   no text copied).
 - Example listing copy and app facts in `examples/` are adapted from the author's own published app
-  ([Saju Club](https://saju.hun-is.com)); the en/ko disclosure templates in `listing_brief` follow that
+  ([Saju Today](https://saju.hun-is.com)); the en/ko disclosure templates in `listing_brief` follow that
   app's shipped wording. Store field caps are quoted from Google Play and App Store Connect help pages.
+  `examples/saju_listing_bad.txt` / `saju_listing_good.txt` / `invoke_check.json` are **invented** copy for a
+  fictional app ("Moonleaf Readings") — the bad sample makes claims no real app of the author's makes.
 - The refund-event rule in `refund_triage` (a refund arrives as `CANCELLATION` +
   `cancel_reason=CUSTOMER_SUPPORT`, never as a `REFUND` event) was learned while
   wiring the author's own app to RevenueCat; the dispatch logic is re-implemented here

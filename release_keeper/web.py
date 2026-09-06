@@ -214,7 +214,7 @@ footer{padding:12px 24px 28px;color:var(--mute);font-size:12.5px;border-top:1px 
   <label><input type="checkbox" name="include_internal"> keep internal commits</label></div>
  </form>
  <form id="f-listing" class="tab hide">
-  <label>App facts (JSON — name, tagline, category, model_name, features[], has_payments, has_accounts, …)</label><textarea name="app_facts" placeholder='{"name": "Saju Club", "category": "fortune", "model_name": "Google Gemini", ...}'></textarea>
+  <label>App facts (JSON — name, tagline, category, model_name, features[], has_payments, has_accounts, …)</label><textarea name="app_facts" placeholder='{"name": "Saju Today", "category": "fortune", "model_name": "Google Gemini", ...}'></textarea>
   <label>Drafted listing to validate (JSON, optional — deterministic check only)</label><textarea name="listing" style="min-height:70px"></textarea>
   <div class="row"><label>lang <input type="text" name="lang" value="en" style="width:60px"></label>
   <label>store <select name="store"><option>play</option><option>appstore</option></select></label></div>

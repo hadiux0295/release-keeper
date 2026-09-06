@@ -15,7 +15,7 @@ def _ev(**kw):
 
 
 def test_customer_support_cancellation_is_refund_consumable():
-    t = run_refund_triage(_ev(cancel_reason="CUSTOMER_SUPPORT"), products=PRODUCTS, app_name="Saju Club")
+    t = run_refund_triage(_ev(cancel_reason="CUSTOMER_SUPPORT"), products=PRODUCTS, app_name="Saju Today")
     assert t.event_class == "refund"
     assert t.product_kind == "consumable"
     assert "deduct" in t.entitlement_action and "5 credits" in t.entitlement_action
