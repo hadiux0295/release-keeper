@@ -74,7 +74,8 @@ Environment: `RK_MODEL` (LiteLLM id, default `openai/nvidia/nemotron-3-super-120
 
 The AgentCore HTTP contract (`POST /invocations`, `GET /ping`, port 8080, ARM64 `Dockerfile`) is
 implemented in `release_keeper/agentcore.py` on top of the same app and verified locally.
-**Not deployed as of 2026-09-05** (no AWS account yet) — status and the deploy runbook are in
+**Not deployed — deployment was intentionally skipped for this submission** (AgentCore is optional under the
+hackathon rules; the contract is implemented and verified locally). Status and the deploy runbook are in
 [`docs/agentcore.md`](docs/agentcore.md).
 
 ```bash
@@ -82,6 +83,14 @@ uvicorn release_keeper.agentcore:app --host 0.0.0.0 --port 8080
 curl localhost:8080/ping
 curl -X POST localhost:8080/invocations -H 'content-type: application/json' -d @examples/invoke_check.json
 ```
+
+## Demo video
+
+`demo/` reproduces the submission video without a screen recorder: `demo/narration.md` is the
+script (every number traces to the E2E report), `demo/record.py` drives the web page with
+Playwright and writes one silent clip per tool plus the still slides, `demo/assemble.py` cuts the
+model waits to the narration length and muxes the narration with ffmpeg. Narration audio is
+text-to-speech; the voice is synthetic.
 
 ## Tested on a real release
 

@@ -1,9 +1,10 @@
 # Amazon Bedrock AgentCore Runtime — status and deploy runbook
 
-**Status (2026-09-05):** the AgentCore HTTP service contract is implemented
-(`release_keeper/agentcore.py`) and verified locally. **Not deployed** — the author has no AWS
-account yet. If it is deployed before submission this line changes; until then the Devpost entry
-must not claim an AgentCore deployment.
+**Status (final, 2026-09-08):** the AgentCore HTTP service contract is implemented
+(`release_keeper/agentcore.py`) and verified locally. **Not deployed — deployment was intentionally
+skipped for this submission.** AgentCore is optional under the hackathon rules, and the author decided
+not to open an AWS account for it. The Devpost entry and the demo video do not claim an AgentCore
+deployment. The runbook below is kept for anyone who wants to deploy the same container.
 
 ## What is implemented
 
@@ -32,7 +33,7 @@ POST /invocations {"tool":"refund","mode":"agent",…} → success · 21.1 s · 
 No AWS credentials are needed for any of the above: the model endpoint is whatever
 `RK_MODEL` / `RK_API_BASE` / `RK_API_KEY` point at.
 
-## Deploy runbook (account day, ~2 h budget)
+## Deploy runbook (not executed; ~2 h budget if attempted)
 
 Prerequisites: AWS account + credentials (`aws sts get-caller-identity` works), Node.js ≥ 20,
 Docker daemon running (Container build only).
