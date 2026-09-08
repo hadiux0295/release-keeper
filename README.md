@@ -132,8 +132,10 @@ flowchart LR
     T1 & T2 & T3 & T4b -- JSON --> M
     M -- answer --> OUT[developer-readable answer]
     T4b -. re-run independently .-> PC[post-check: red = exit 1 / verdict BLOCK]
-    CLI -- --raw --> T1 & T2 & T3 & T4a & T4b
+    CLI -- "--raw (no LLM)" --> T1 & T2 & T3 & T4a & T4b
 ```
+
+Static image (for renderers without mermaid): [`docs/architecture.png`](docs/architecture.png), source `docs/architecture.mmd`, rendered by `python demo/render_arch.py`.
 
 Tools are deterministic Python; the model plans, calls, and explains. The only generative
 step (writing a store listing) is bracketed by a brief before and a check after, and the

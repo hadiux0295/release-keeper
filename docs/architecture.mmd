@@ -1,0 +1,45 @@
+%% Source of docs/architecture.png (render: python demo/render_arch.py). Same content as the README diagram, laid out for a static image.
+flowchart LR
+    subgraph inputs [Real inputs]
+        direction TB
+        A[store / result-screen copy]
+        B[RevenueCat webhook JSON]
+        C[git log --oneline]
+        D[app facts JSON]
+        A ~~~ B ~~~ C ~~~ D
+    end
+    subgraph surface [Thin surface]
+        direction TB
+        CLI[python -m release_keeper]
+        WEB[FastAPI one page<br/>+ /ping · /invocations]
+        CLI ~~~ WEB
+    end
+    subgraph agent [Strands Agent]
+        direction TB
+        M[LiteLLMModel<br/>OpenRouter free tier · Bedrock · any OpenAI-compatible]
+        subgraph tools [deterministic @tool functions]
+            direction TB
+            T1[disclosure_check]
+            T2[refund_triage]
+            T3[release_notes]
+            T4a[listing_brief]
+            T4b[listing_check]
+        end
+    end
+    inputs --> CLI
+    inputs --> WEB
+    CLI -- prompt --> M
+    WEB -- prompt --> M
+    M -- one call --> T1
+    M -- one call --> T2
+    M -- one call --> T3
+    M -- "brief → write → check" --> T4a
+    T4a --> T4b
+    tools -- JSON --> M
+    M -- answer --> OUT[developer-readable answer]
+    OUT -. "surface re-runs the check itself" .-> PC[post-check<br/>red = exit 1 / verdict BLOCK]
+    CLI -. "--raw (no LLM)" .-> tools
+    classDef det fill:#e8f1ea,stroke:#3a6b46,color:#14301c;
+    classDef gen fill:#fdf1dc,stroke:#b7791f,color:#3d2a08;
+    class T1,T2,T3,T4a,T4b,PC det;
+    class M gen;
