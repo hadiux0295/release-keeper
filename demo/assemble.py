@@ -15,12 +15,14 @@ import json
 import pathlib
 import subprocess
 
-SEGMENTS = [  # (segment id, visual)
-    ("S1", "slide_title"), ("S2", "slide_problem"), ("S3", "tab_check"), ("S4", "tab_refund"),
-    ("S5", "tab_notes"), ("S6", "tab_listing"), ("S7", "slide_arch"), ("S8", "slide_close"),
+SEGMENTS = [  # (segment id, visual) — a list of stills is shown in equal shares of the narration
+    ("S1", "slide_title"), ("S2", ["slide_problem_1", "slide_problem_2", "slide_problem_3", "slide_problem_4"]),
+    ("S3", "tab_check"), ("S4", "tab_refund"), ("S5", "tab_notes"), ("S6", "tab_listing"),
+    ("S7", ["slide_arch_1", "slide_arch_2", "slide_arch_3", "slide_arch_4"]), ("S8", "slide_close"),
 ]
 PAUSE = 0.6        # seconds of silence after each narration
-MIN_WAIT = 2.0     # a model wait is never shortened below this (the "agent running…" state stays visible)
+MIN_WAIT = 2.5     # every model wait is cut to this (enough to show the "agent running…" status)
+MAX_STRETCH = 2.0  # the result range may be slowed down up to this factor before the last frame is held
 FPS = 30
 
 
@@ -29,8 +31,8 @@ def dur(path: pathlib.Path) -> float:
     return float(o.strip())
 
 
-def keep_ranges(events: list[dict], clip_len: float, target: float) -> list[tuple[float, float]]:
-    """Return the [start, end) ranges of the clip to keep so that the total is close to target."""
+def keep_ranges(events: list[dict], clip_len: float) -> list[tuple[float, float]]:
+    """Return the [start, end) ranges of the clip to keep (retries removed, waits cut to MIN_WAIT)."""
     cuts: list[tuple[float, float, bool]] = []  # (start, end, is_wait)
     ev = [e for e in events if e["kind"] in ("click", "error", "result")]
     for i, e in enumerate(ev):
@@ -45,21 +47,12 @@ def keep_ranges(events: list[dict], clip_len: float, target: float) -> list[tupl
                 cuts.append((e["t"] - 0.05, ev[j]["t"] - 0.05, False))
         elif nxt["kind"] == "result" and nxt["t"] - e["t"] > MIN_WAIT + 1.0:
             cuts.append((e["t"] + 1.0, nxt["t"] - 0.6, True))
-    # how much wait to keep: scale between "all waits cut to MIN_WAIT" and "nothing cut"
-    fixed_cut = sum(b - a for a, b, w in cuts if not w)
-    waits = [(a, b) for a, b, w in cuts if w]
-    full = clip_len - fixed_cut
-    minimal = full - sum(max(0.0, (b - a) - MIN_WAIT) for a, b in waits)
-    if not waits or target >= full:
-        frac = 1.0
-    elif target <= minimal:
-        frac = 0.0
-    else:
-        frac = (target - minimal) / (full - minimal)
+    # every wait is cut to MIN_WAIT: the result must be on screen within seconds of the click;
+    # the remaining narration time is filled by stretching/holding the result (see build_segment)
     final: list[tuple[float, float]] = [(a, b) for a, b, w in cuts if not w]
-    for a, b in waits:
-        keep = MIN_WAIT + frac * ((b - a) - MIN_WAIT)
-        final.append((a + keep, b))
+    for a, b, w in cuts:
+        if w:
+            final.append((a + MIN_WAIT, b))
     final.sort()
     ranges, pos = [], 0.0
     for a, b in final:
@@ -71,34 +64,51 @@ def keep_ranges(events: list[dict], clip_len: float, target: float) -> list[tupl
     return ranges
 
 
-def build_segment(sid: str, visual: str, clips: pathlib.Path, tts: pathlib.Path, work: pathlib.Path, events: dict) -> pathlib.Path:
+def build_segment(sid: str, visual, clips: pathlib.Path, tts: pathlib.Path, work: pathlib.Path, events: dict) -> pathlib.Path:
     audio = tts / f"{sid}.wav"
     target = dur(audio) + PAUSE
     out = work / f"{sid}.mp4"
     common = ["-r", str(FPS), "-pix_fmt", "yuv420p", "-c:v", "libx264", "-preset", "medium", "-crf", "18",
               "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-t", f"{target:.3f}", "-y", str(out)]
-    if visual.startswith("slide_"):
-        cmd = ["ffmpeg", "-v", "error", "-loop", "1", "-framerate", str(FPS), "-i", str(clips / f"{visual}.png"),
-               "-i", str(audio), "-af", f"apad=pad_dur={PAUSE}", "-vf", "scale=1920:1080,format=yuv420p", *common]
+    if isinstance(visual, list) or visual.startswith("slide_"):
+        stills = visual if isinstance(visual, list) else [visual]
+        share = target / len(stills)
+        ins = []
+        for st in stills:
+            ins += ["-loop", "1", "-framerate", str(FPS), "-t", f"{share:.3f}", "-i", str(clips / f"{st}.png")]
+        n = len(stills)
+        vf = "".join(f"[{i}:v]scale=1920:1080,format=yuv420p,setpts=PTS-STARTPTS[s{i}];" for i in range(n))
+        vf += "".join(f"[s{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=0[vo];[{n}:a]apad=pad_dur={PAUSE}[ao]"
+        cmd = ["ffmpeg", "-v", "error", *ins, "-i", str(audio), "-filter_complex", vf, "-map", "[vo]", "-map", "[ao]", *common]
         subprocess.check_call(cmd)
         return out
     clip = clips / f"{visual}.webm"
     clip_len = dur(clip)
-    ranges = keep_ranges(events[visual]["events"], clip_len, target)
+    ranges = keep_ranges(events[visual]["events"], clip_len)
     kept = sum(b - a for a, b in ranges)
-    parts = "".join(f"[0:v]trim=start={a:.3f}:end={b:.3f},setpts=PTS-STARTPTS[v{i}];" for i, (a, b) in enumerate(ranges))
-    chain = parts + "".join(f"[v{i}]" for i in range(len(ranges))) + f"concat=n={len(ranges)}:v=1:a=0[vc];"
+    # stretch factor for the last range (the result on screen), capped; the rest is held
+    last_len = ranges[-1][1] - ranges[-1][0]
+    head = kept - last_len
+    k = 1.0
     if kept < target - 0.05:
-        chain += f"[vc]tpad=stop_mode=clone:stop_duration={target - kept:.3f}[vo]"
+        k = min(MAX_STRETCH, (target - head) / last_len)
     elif kept > target + 0.05:
-        chain += f"[vc]setpts=PTS*{target / kept:.5f}[vo]"
+        k = max(0.5, (target - head) / last_len)  # shrink the result range if the clip is too long
+    parts = ""
+    for i, (a, b) in enumerate(ranges):
+        f = f"setpts=(PTS-STARTPTS)*{k:.5f}" if i == len(ranges) - 1 else "setpts=PTS-STARTPTS"
+        parts += f"[0:v]trim=start={a:.3f}:end={b:.3f},{f}[v{i}];"
+    chain = parts + "".join(f"[v{i}]" for i in range(len(ranges))) + f"concat=n={len(ranges)}:v=1:a=0[vc];"
+    shown = head + last_len * k
+    if shown < target - 0.05:
+        chain += f"[vc]tpad=stop_mode=clone:stop_duration={target - shown:.3f}[vo]"
     else:
         chain += "[vc]copy[vo]"
     chain += f";[1:a]apad=pad_dur={PAUSE}[ao]"
     cmd = ["ffmpeg", "-v", "error", "-i", str(clip), "-i", str(audio), "-filter_complex", chain,
            "-map", "[vo]", "-map", "[ao]", *common]
     subprocess.check_call(cmd)
-    print(f"  {sid} {visual}: clip {clip_len:.1f}s → kept {kept:.1f}s, target {target:.1f}s, ranges {[(round(a,1), round(b,1)) for a, b in ranges]}")
+    print(f"  {sid} {visual}: clip {clip_len:.1f}s → kept {kept:.1f}s (tail ×{k:.2f}), target {target:.1f}s, ranges {[(round(a,1), round(b,1)) for a, b in ranges]}")
     return out
 
 

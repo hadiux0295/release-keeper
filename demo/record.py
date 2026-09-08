@@ -165,12 +165,24 @@ class Rec:
         return {"clip": dst.name, "events": self.events}
 
 
+# slides whose items are revealed one by one while the narration enumerates them:
+# name → (css selector of the items, count). Produces <name>_1.png … <name>_<count>.png
+PROGRESSIVE = {"slide_problem": ("ol li", 4), "slide_arch": (".grid .box", 4)}
+
+
 def slides(pw, out: pathlib.Path):
     b = pw.chromium.launch()
     pg = b.new_page(viewport={"width": W, "height": H})
     for name, body in SLIDES.items():
-        pg.set_content("<!doctype html><html><head><meta charset=utf-8>" + SLIDE_CSS + "</head><body>" + body + "</body></html>")
+        html = "<!doctype html><html><head><meta charset=utf-8>" + SLIDE_CSS + "</head><body>" + body + "</body></html>"
+        pg.set_content(html)
         pg.screenshot(path=str(out / f"{name}.png"))
+        if name in PROGRESSIVE:
+            sel, n = PROGRESSIVE[name]
+            for k in range(1, n + 1):
+                dim = f"<style>{sel}:nth-child(n+{k + 1}){{opacity:.28}}</style>"
+                pg.set_content(html.replace("</head>", dim + "</head>"))
+                pg.screenshot(path=str(out / f"{name}_{k}.png"))
     b.close()
 
 
