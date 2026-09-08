@@ -205,6 +205,7 @@ def main():
             r.run("agent", hold_after=10)
             log["tab_check"] = r.close()
             print("tab_check", log["tab_check"]["events"][-2])
+            (out / "events.json").write_text(json.dumps(log, indent=2, ensure_ascii=False))
 
         if want("tab_refund"):
             r = Rec(pw, a.base, out, "tab_refund")
@@ -215,6 +216,7 @@ def main():
             r.run("agent", hold_after=9)
             log["tab_refund"] = r.close()
             print("tab_refund", log["tab_refund"]["events"][-2])
+            (out / "events.json").write_text(json.dumps(log, indent=2, ensure_ascii=False))
 
         if want("tab_notes"):
             r = Rec(pw, a.base, out, "tab_notes")
@@ -225,6 +227,7 @@ def main():
             r.run("agent", hold_after=12)
             log["tab_notes"] = r.close()
             print("tab_notes", log["tab_notes"]["events"][-2])
+            (out / "events.json").write_text(json.dumps(log, indent=2, ensure_ascii=False))
 
         if want("tab_listing"):
             r = Rec(pw, a.base, out, "tab_listing")
@@ -234,6 +237,7 @@ def main():
             r.run("agent", hold_after=14)
             log["tab_listing"] = r.close()
             print("tab_listing", log["tab_listing"]["events"][-2])
+            (out / "events.json").write_text(json.dumps(log, indent=2, ensure_ascii=False))
 
     (out / "events.json").write_text(json.dumps(log, indent=2, ensure_ascii=False))
     shutil.rmtree(out / "_raw", ignore_errors=True)

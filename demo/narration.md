@@ -15,7 +15,7 @@ own work.
 The four chores. One: does the store copy say what the rules require — that the results are
 AI-generated, that it is not advice, how refunds work? Two: when a refund webhook arrives at
 2 a.m., which of the twenty-one RevenueCat event types is it, and what do I revoke? Three: turning
-forty commits into release notes a user can read, under the five-hundred-character store cap.
+thirty-nine commits into release notes a user can read, under the five-hundred-character store cap.
 Four: a store listing in a language I do not write well. Each one is a tool.
 
 ## S3 · tool ① disclosure check (visual: tab_check_bad + tab_check_live) · 0:45–1:30
@@ -31,7 +31,7 @@ Tool two: a RevenueCat webhook body. This one is a CANCELLATION with cancel reas
 CUSTOMER_SUPPORT — that is the shape a refund actually arrives in. There is no REFUND event type; a
 naive handler waiting for one never fires. The agent classifies it as a refund, tells me to revoke the entitlement, drafts
 the reply to the customer, and warns that Play credentials must be registered before the
-webhook can be trusted. About four seconds.
+webhook can be trusted. A few seconds, one tool call.
 
 ## S5 · tool ③ release notes (visual: tab_notes) · 2:05–2:50
 Tool three: the real git log of my last release — thirty-nine commits, written in Korean as
