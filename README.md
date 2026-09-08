@@ -86,6 +86,8 @@ curl -X POST localhost:8080/invocations -H 'content-type: application/json' -d @
 
 ## Demo video
 
+Watch: <https://www.youtube.com/watch?v=alwCZOrG_FM> (3:59).
+
 `demo/` reproduces the submission video without a screen recorder: `demo/narration.md` is the
 script (every number traces to the E2E report), `demo/record.py` drives the web page with
 Playwright and writes one silent clip per tool plus the still slides, `demo/assemble.py` cuts the
